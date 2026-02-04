@@ -26,42 +26,60 @@ def get_client():
 # --- PDF GENERATION FUNCTION ---
 def create_pdf(markdown_content):
     """
-    Converts Markdown text -> HTML -> PDF binary with AGGRESSIVE formatting fixes.
+    Final Polish: Fixes "Key Management" artifacts and merges Investor Relations lines.
     """
     import re
     
-    # --- 🛠️ 1. HEADER CLEANUP (Fixes the "** *" mess) ---
-    # This finds the "Key Management" line, no matter how messy (stars, spaces, colons),
-    # deletes the mess, and replaces it with a clean, bold header.
+    # --- 1. CLEAN THE HEADER ---
+    # Replace the whole "Key Management" line (and any junk stars around it) with a clean header
     markdown_content = re.sub(
-        r'(?i)^.*Key Management.*Contact.*$', 
+        r'(?i)^[\s\*]*Key Management.*?Contact.*?$', 
         '\n\n### Key Management & Contact', 
         markdown_content, 
         flags=re.MULTILINE
     )
 
-    # --- 🛠️ 2. MANAGEMENT LIST FIXER ---
-    # Looks for CEO, CFO, Investor hidden in the middle of lines and forces them down.
-    # Handles cases like: "* CEO", "**CEO", " * **CEO"
-    target_keywords = ["CEO", "CFO", "Investor Relations", "Investor"]
-    for keyword in target_keywords:
-        # Regex: Find the keyword, optionally preceded by stars/bolding, NOT at the start of a line
-        pattern = fr'(?i)(?<!\n)(?:[ \t]*[*•-][ \t]*)+(\*\*)?{keyword}'
-        replacement = f'\n* **{keyword}'
+    # --- 2. CLEAN & STANDARDIZE TITLES (CEO / CFO / President) ---
+    # This loop ensures that specific titles start on a new line with a clean bullet.
+    # We put "President & CEO" first so it doesn't get chopped up by the "CEO" rule.
+    target_titles = ["President & CEO", "CEO", "CFO", "President"]
+    
+    for title in target_titles:
+        # Regex: Find the title, preceded by any amount of garbage (stars, spaces, bullets), followed by a colon
+        # Replace it with: Newline + Bullet + Bold Title + Colon
+        pattern = fr'(?i)(?:\\n|^|[\s\*•-])+\**{re.escape(title)}\**\s*:'
+        replacement = f'\n* **{title}:**'
         markdown_content = re.sub(pattern, replacement, markdown_content)
 
-    # --- 🛠️ 3. STRENGTHS & WEAKNESSES FIXER (The "Wall of Text" Fix) ---
-    # First, force "Strengths:" and "Weaknesses:" to be on their own lines
+    # --- 3. FIX INVESTOR RELATIONS (The Merge Logic) ---
+    
+    # Step A: Standardize the "Investor Relations" label first
+    markdown_content = re.sub(
+        r'(?i)(?:\\n|^|[\s\*•-])+\**Investor\s*Relations\**\s*:', 
+        '\n* **Investor Relations:**', 
+        markdown_content
+    )
+
+    # Step B: The Merge. 
+    # Look for "**Investor Relations:**" followed by a newline and an email address.
+    # This grabs the email from the next line and pulls it up.
+    markdown_content = re.sub(
+        r'(?i)(\*\*Investor Relations:\*\*)\s*\n+[\s\*•-]*([^\n]*@)', 
+        r'\1 \2', 
+        markdown_content
+    )
+
+    # --- 4. CLEANUP ARTIFACTS ---
+    # Removes the accidental double stars or weird space-star combos (like "* *")
+    markdown_content = markdown_content.replace("****", "**")
+    markdown_content = re.sub(r'(?m)^\s*\*\s*\*\s*$', '', markdown_content) # Deletes empty "* *" lines
+
+    # --- 5. STRENGTHS & WEAKNESSES FORMATTING ---
+    # Ensures these headers always have a blank line above them so they don't look like a wall of text.
     markdown_content = re.sub(r'(?i)(?<!\n)\s*\*?\s*\*\*?Strengths:?\**', '\n\n**Strengths:**\n', markdown_content)
     markdown_content = re.sub(r'(?i)(?<!\n)\s*\*?\s*\*\*?Weaknesses:?\**', '\n\n**Weaknesses:**\n', markdown_content)
-
-    # --- 🛠️ 4. GLOBAL INLINE BULLET FIXER ---
-    # This is the "Magic Bullet". It finds ANY bullet point that is stuck in the middle of a sentence
-    # (e.g., "...profitability. * **Next Point...") and slams it onto a new line.
-    # It specifically looks for: [Space] [Star] [Space] [Bold]
-    markdown_content = re.sub(r'(?<!\n)\s+\*\s+\*\*', '\n* **', markdown_content)
-
-    # --- CONVERSION STEPS ---
+    
+    # --- CONVERSION TO HTML/PDF ---
     html_text = markdown.markdown(markdown_content, extensions=['tables'])
     
     styled_html = f"""
@@ -78,7 +96,7 @@ def create_pdf(markdown_content):
             th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }}
             th {{ background-color: #f8f9fa; font-weight: bold; color: #2c3e50; }}
             
-            /* Specific List Styling to ensure bullets appear */
+            /* Specific List Styling */
             ul {{ margin-top: 5px; margin-bottom: 15px; padding-left: 20px; }}
             li {{ margin-bottom: 6px; }}
             
@@ -92,7 +110,6 @@ def create_pdf(markdown_content):
     </html>
     """
     
-    # Generate PDF
     pdf_buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(io.BytesIO(styled_html.encode("utf-8")), dest=pdf_buffer)
     
@@ -302,6 +319,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
