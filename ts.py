@@ -199,10 +199,15 @@ if submitted and ticker_input:
             # --- SPLIT LOGIC ---
             split_marker = "### Appendix"
             
-            if split_marker in full_text:
-                parts = full_text.split(split_marker)
-                main_report = parts[0]
-                rationale_text = parts[1]
+            pattern = r"(?i)\n#{1,3}\s+\**Appendix\**.*" 
+            
+            # Use re.split to chop the text at that pattern
+            parts = re.split(pattern, full_text, maxsplit=1)
+            
+            if len(parts) > 1:
+                main_report = parts[0].strip()
+                # We re-add the header to the appendix so it looks nice in the expander
+                rationale_text = "### Appendix\n" + parts[1].strip()
             else:
                 main_report = full_text
                 rationale_text = "No specific rationale generated."
@@ -253,5 +258,6 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
