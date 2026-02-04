@@ -26,60 +26,64 @@ def get_client():
 # --- PDF GENERATION FUNCTION ---
 def create_pdf(markdown_content):
     """
-    Converts Markdown text -> HTML -> PDF binary with Strict Formatting Fixes.
+    Converts Markdown text -> HTML -> PDF binary with AGGRESSIVE formatting fixes.
     """
     import re
     
-    # --- 🛠️ SANITIZATION BLOCK (The Fix) ---
-    
-    # 1. Clean the Header
-    # This regex finds "Key Management & Contact" regardless of existing stars (** or *) 
-    # and replaces it with a clean, unbolded header to start fresh.
+    # --- 🛠️ 1. HEADER CLEANUP (Fixes the "** *" mess) ---
+    # This finds the "Key Management" line, no matter how messy (stars, spaces, colons),
+    # deletes the mess, and replaces it with a clean, bold header.
     markdown_content = re.sub(
-        r'\*+Key Management & Contact:?\*+', 
+        r'(?i)^.*Key Management.*Contact.*$', 
         '\n\n### Key Management & Contact', 
         markdown_content, 
-        flags=re.IGNORECASE
+        flags=re.MULTILINE
     )
 
-    # 2. Force Newlines for the List Items
-    # This regex hunts for CEO, CFO, or Investor hidden in the text (even if stuck like "** * CEO")
-    # and forces them onto a new line with a clean bullet point.
-    # It handles: " * CEO", "**CEO", "  CEO", etc.
-    patterns = [
-        (r'(?i)(?:^|\s|[*•-])+(?:\*\*)?(CEO|CFO|Investor)(?:\*\*)?:', r'\n* **\1:**'),
-        (r'(?i)(?:^|\s|[*•-])+(?:\*\*)?(Email)(?:\*\*)?:', r'\n* **\1:**') 
-    ]
-    
-    for pattern, replacement in patterns:
+    # --- 🛠️ 2. MANAGEMENT LIST FIXER ---
+    # Looks for CEO, CFO, Investor hidden in the middle of lines and forces them down.
+    # Handles cases like: "* CEO", "**CEO", " * **CEO"
+    target_keywords = ["CEO", "CFO", "Investor Relations", "Investor"]
+    for keyword in target_keywords:
+        # Regex: Find the keyword, optionally preceded by stars/bolding, NOT at the start of a line
+        pattern = fr'(?i)(?<!\n)(?:[ \t]*[*•-][ \t]*)+(\*\*)?{keyword}'
+        replacement = f'\n* **{keyword}'
         markdown_content = re.sub(pattern, replacement, markdown_content)
 
-    # 3. Final Cleanup of accidental double stars or double spaces
-    markdown_content = markdown_content.replace('****', '**')
-    
-    # --- END SANITIZATION ---
+    # --- 🛠️ 3. STRENGTHS & WEAKNESSES FIXER (The "Wall of Text" Fix) ---
+    # First, force "Strengths:" and "Weaknesses:" to be on their own lines
+    markdown_content = re.sub(r'(?i)(?<!\n)\s*\*?\s*\*\*?Strengths:?\**', '\n\n**Strengths:**\n', markdown_content)
+    markdown_content = re.sub(r'(?i)(?<!\n)\s*\*?\s*\*\*?Weaknesses:?\**', '\n\n**Weaknesses:**\n', markdown_content)
 
-    # Convert to HTML
+    # --- 🛠️ 4. GLOBAL INLINE BULLET FIXER ---
+    # This is the "Magic Bullet". It finds ANY bullet point that is stuck in the middle of a sentence
+    # (e.g., "...profitability. * **Next Point...") and slams it onto a new line.
+    # It specifically looks for: [Space] [Star] [Space] [Bold]
+    markdown_content = re.sub(r'(?<!\n)\s+\*\s+\*\*', '\n* **', markdown_content)
+
+    # --- CONVERSION STEPS ---
     html_text = markdown.markdown(markdown_content, extensions=['tables'])
     
-    # CSS Styling
     styled_html = f"""
     <html>
     <head>
         <style>
-            body {{ font-family: Helvetica, sans-serif; font-size: 12px; line-height: 1.4; color: #333; }}
-            h1 {{ color: #2c3e50; font-size: 18px; margin-bottom: 10px; }}
-            h2 {{ color: #2c3e50; font-size: 16px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-            h3 {{ color: #2c3e50; font-size: 14px; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }}
+            body {{ font-family: Helvetica, sans-serif; font-size: 12px; line-height: 1.5; color: #333; }}
+            h1 {{ color: #2c3e50; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; }}
+            h2 {{ color: #2c3e50; font-size: 16px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
+            h3 {{ color: #2c3e50; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold; }}
             
-            /* Table Styling */
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #f4f6f7; font-weight: bold; color: #2c3e50; }}
+            /* Clean Table Styling */
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }}
+            th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }}
+            th {{ background-color: #f8f9fa; font-weight: bold; color: #2c3e50; }}
             
-            /* List Styling */
-            ul {{ margin-top: 5px; margin-bottom: 10px; padding-left: 20px; }}
-            li {{ margin-bottom: 5px; }}
+            /* Specific List Styling to ensure bullets appear */
+            ul {{ margin-top: 5px; margin-bottom: 15px; padding-left: 20px; }}
+            li {{ margin-bottom: 6px; }}
+            
+            /* Source Footnote Styling */
+            em {{ font-size: 10px; color: #666; display: block; margin-top: 5px; }}
         </style>
     </head>
     <body>
@@ -298,6 +302,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
