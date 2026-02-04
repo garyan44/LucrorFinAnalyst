@@ -77,7 +77,7 @@ def generate_company_report(ticker):
             * "{ticker} Fitch rating action commentary"
             * Look for the company's latest **Debt Investor Presentation** or **10-K** (Liquidity/Capital Resources section).
         -   **Financials:** Search for "{ticker} Investor Presentation Q3 2025" (or latest available) to get the most recent LTM numbers.
-        -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact". Include direct email if available. Write in Clean Format using Bullet Points.
+        -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact". Include direct email if available. Write in Clean Format using Bullet Points. There must be 3 lines, one for CEO, one for CFO, and one for email address.
 
     
     2.  **Calculations (MANDATORY):**
@@ -259,6 +259,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
