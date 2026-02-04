@@ -1,4 +1,4 @@
-ilimport streamlit as st
+import streamlit as st
 from google import genai
 from google.genai import types
 import time
@@ -253,4 +253,5 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
