@@ -26,33 +26,60 @@ def get_client():
 # --- PDF GENERATION FUNCTION ---
 def create_pdf(markdown_content):
     """
-    Converts Markdown text -> HTML -> PDF binary.
+    Converts Markdown text -> HTML -> PDF binary with Strict Formatting Fixes.
     """
-    # 1. Convert Markdown to HTML (using 'tables' extension)
-
-    markdown_content = markdown_content.replace("Key Management & Contact:", "\n\n**Key Management & Contact:**\n")
+    import re
     
-    # 2. Force a newline before every specific bullet point (CEO, CFO, Investor)
-    # This regex finds "* **CEO" if it's NOT at the start of a line and pushes it down.
-    markdown_content = re.sub(r'(?<!\n)\* \*\*(CEO|CFO|Investor)', r'\n\n* **\1', markdown_content)
+    # --- 🛠️ SANITIZATION BLOCK (The Fix) ---
+    
+    # 1. Clean the Header
+    # This regex finds "Key Management & Contact" regardless of existing stars (** or *) 
+    # and replaces it with a clean, unbolded header to start fresh.
+    markdown_content = re.sub(
+        r'\*+Key Management & Contact:?\*+', 
+        '\n\n### Key Management & Contact', 
+        markdown_content, 
+        flags=re.IGNORECASE
+    )
+
+    # 2. Force Newlines for the List Items
+    # This regex hunts for CEO, CFO, or Investor hidden in the text (even if stuck like "** * CEO")
+    # and forces them onto a new line with a clean bullet point.
+    # It handles: " * CEO", "**CEO", "  CEO", etc.
+    patterns = [
+        (r'(?i)(?:^|\s|[*•-])+(?:\*\*)?(CEO|CFO|Investor)(?:\*\*)?:', r'\n* **\1:**'),
+        (r'(?i)(?:^|\s|[*•-])+(?:\*\*)?(Email)(?:\*\*)?:', r'\n* **\1:**') 
+    ]
+    
+    for pattern, replacement in patterns:
+        markdown_content = re.sub(pattern, replacement, markdown_content)
+
+    # 3. Final Cleanup of accidental double stars or double spaces
+    markdown_content = markdown_content.replace('****', '**')
+    
+    # --- END SANITIZATION ---
+
+    # Convert to HTML
     html_text = markdown.markdown(markdown_content, extensions=['tables'])
     
-    # 2. Add Custom CSS for clean tables and fonts
+    # CSS Styling
     styled_html = f"""
     <html>
     <head>
         <style>
-            body {{ font-family: Helvetica, sans-serif; font-size: 12px; }}
-            h1 {{ color: #2c3e50; font-size: 18px; }}
-            h2 {{ color: #2c3e50; font-size: 16px; margin-top: 15px; }}
-            h3 {{ color: #2c3e50; font-size: 14px; margin-top: 10px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+            body {{ font-family: Helvetica, sans-serif; font-size: 12px; line-height: 1.4; color: #333; }}
+            h1 {{ color: #2c3e50; font-size: 18px; margin-bottom: 10px; }}
+            h2 {{ color: #2c3e50; font-size: 16px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
+            h3 {{ color: #2c3e50; font-size: 14px; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }}
+            
+            /* Table Styling */
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }}
             th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #f2f2f2; font-weight: bold; }}
- 
+            th {{ background-color: #f4f6f7; font-weight: bold; color: #2c3e50; }}
+            
+            /* List Styling */
             ul {{ margin-top: 5px; margin-bottom: 10px; padding-left: 20px; }}
             li {{ margin-bottom: 5px; }}
-            hr {{ margin-top: 20px; margin-bottom: 20px; }}
         </style>
     </head>
     <body>
@@ -61,7 +88,7 @@ def create_pdf(markdown_content):
     </html>
     """
     
-    # 3. Convert HTML to PDF using xhtml2pdf
+    # Generate PDF
     pdf_buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(io.BytesIO(styled_html.encode("utf-8")), dest=pdf_buffer)
     
@@ -271,6 +298,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
