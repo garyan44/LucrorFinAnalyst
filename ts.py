@@ -1,4 +1,4 @@
-import streamlit as st
+ilimport streamlit as st
 from google import genai
 from google.genai import types
 import time
@@ -123,7 +123,7 @@ def generate_company_report(ticker):
     **Key Management & Contact:**
     * **CEO:** Adrian Mardell
     * **CFO:** Richard Molyneux
-    * **Investor Relations:** investor@jaguarlandrover.com
+    * **Investor Relations:** Email : investor@jaguarlandrover.com
 
 
 
@@ -148,11 +148,6 @@ def generate_company_report(ticker):
     ### Key Credit Drivers
     **Premium brand positioning:** ...
     *Source: Market analysis and JLR November 2025 Debt Investor Presentation.*
-    
-    ______________________
-    
-    ### Appendix
-    * Found credit metrics in the November 2025 Debt Investor Deck. 
 
     ### YOUR TASK:
     Now, generate the report for the following ticker using the latest available live data.
@@ -258,3 +253,4 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
