@@ -29,6 +29,12 @@ def create_pdf(markdown_content):
     Converts Markdown text -> HTML -> PDF binary.
     """
     # 1. Convert Markdown to HTML (using 'tables' extension)
+
+    markdown_content = markdown_content.replace("Key Management & Contact:", "\n\n**Key Management & Contact:**\n")
+    
+    # 2. Force a newline before every specific bullet point (CEO, CFO, Investor)
+    # This regex finds "* **CEO" if it's NOT at the start of a line and pushes it down.
+    markdown_content = re.sub(r'(?<!\n)\* \*\*(CEO|CFO|Investor)', r'\n\n* **\1', markdown_content)
     html_text = markdown.markdown(markdown_content, extensions=['tables'])
     
     # 2. Add Custom CSS for clean tables and fonts
@@ -43,6 +49,9 @@ def create_pdf(markdown_content):
             table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
+ 
+            ul {{ margin-top: 5px; margin-bottom: 10px; padding-left: 20px; }}
+            li {{ margin-bottom: 5px; }}
             hr {{ margin-top: 20px; margin-bottom: 20px; }}
         </style>
     </head>
@@ -262,6 +271,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
