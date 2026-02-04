@@ -77,6 +77,8 @@ def generate_company_report(ticker):
             * "{ticker} Fitch rating action commentary"
             * Look for the company's latest **Debt Investor Presentation** or **10-K** (Liquidity/Capital Resources section).
         -   **Financials:** Search for "{ticker} Investor Presentation Q3 2025" (or latest available) to get the most recent LTM numbers.
+        -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact".
+
     
     2.  **Calculations (MANDATORY):**
         -   $EBITDA = Operating Income + D&A$
@@ -118,6 +120,13 @@ def generate_company_report(ticker):
 
     *Source: Company Profile, FY2024 Annual Report.*
 
+    **Key Management & Contact:**
+    * **CEO:** Adrian Mardell
+    * **CFO:** Richard Molyneux
+    * **Investor Relations:** investor@jaguarlandrover.com
+
+
+
     ### Financial Summary
     *In GBP mn*
 
@@ -156,7 +165,7 @@ def generate_company_report(ticker):
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash', # Updated to latest stable available
+                model='gemini-2.5-pro', # Updated to latest stable available
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     tools=[types.Tool(google_search=types.GoogleSearch())]
