@@ -6,6 +6,8 @@ import markdown
 from xhtml2pdf import pisa
 import io
 import re
+import base64
+import yfinance as yf
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -362,6 +364,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
