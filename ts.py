@@ -45,7 +45,7 @@ def get_company_domain(ticker):
 
 
 # --- PDF GENERATION FUNCTION ---
-def create_pdf(markdown_content):
+def create_pdf(markdown_content, ticker):
 
     import re
 
@@ -378,6 +378,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
