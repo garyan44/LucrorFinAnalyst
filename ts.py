@@ -23,12 +23,43 @@ MY_API_KEY = st.secrets["GENAI_API_KEY"]
 def get_client():
     return genai.Client(api_key=MY_API_KEY)
 
+
+
+# --- HELPER: GET COMPANY DOMAIN FOR LOGO ---
+def get_company_domain(ticker):
+    """Fetches the official website to ensure the logo is accurate."""
+    try:
+        dat = yf.Ticker(ticker)
+        url = dat.info.get('website')
+        if url:
+            # Clean URL to get just the domain (e.g., tesla.com)
+            domain = url.replace("https://", "").replace("http://", "").replace("www.", "").split('/')[0]
+            return domain
+    except:
+        pass
+    return f"{ticker.lower()}.com"
+
+
+
+
 # --- PDF GENERATION FUNCTION ---
 def create_pdf(markdown_content):
-    """
-    Final Polish: Fixes "Key Management" artifacts and merges Investor Relations lines.
-    """
+
     import re
+
+        # 1. Base64 Encode Lucror Logo for PDF (Universal Support)
+    try:
+        with open("lucror_logo.png", "rb") as f:
+            lucror_base64 = base64.b64encode(f.read()).decode()
+            lucror_img_src = f"data:image/png;base64,{lucror_base64}"
+    except FileNotFoundError:
+        lucror_img_src = "" # Fallback if file missing
+
+        # 2. Get Company Logo
+
+    domain = get_company_domain(ticker)
+
+    company_logo_url = f"https://logo.clearbit.com/{domain}"  
     
     # --- 1. CLEAN THE HEADER ---
     # Replace the whole "Key Management" line (and any junk stars around it) with a clean header
@@ -275,13 +306,25 @@ if submitted and ticker_input:
 
             # 1. Show the Main Report
             st.success("Analysis Complete")
+                        # 1. UI HEADER LOGOS
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                try:
+                    st.image("lucror_logo.png", width=180)
+                except:
+                    st.write("**Lucror Analytics**")
+            with col2:
+                domain = get_company_domain(ticker_input)
+                st.markdown(f'<div style="text-align: right;"><img src="https://logo.clearbit.com/{domain}" width="80"></div>', unsafe_allow_html=True)
+
+
             st.markdown("---")
             st.markdown(main_report)
             
             # --- PDF DOWNLOAD BUTTON ---
             # We pass 'full_text' to include everything, or 'main_report' for just the clean version.
             # Here I passed 'full_text' so you get the thinking process in the PDF too.
-            pdf_data = create_pdf(main_report)
+            pdf_data = create_pdf(main_report, ticker_input)
             if pdf_data:
                 st.download_button(
                     label="📄 Download Report as PDF",
@@ -319,6 +362,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
