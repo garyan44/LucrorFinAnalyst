@@ -119,7 +119,21 @@ def create_pdf(markdown_content):
     <html>
     <head>
         <style>
-            body {{ font-family: Helvetica, sans-serif; font-size: 12px; line-height: 1.5; color: #333; }}
+            
+            @page {{ margin: 0.7in; }}
+
+            body {{ font-family: Helvetica, sans-serif; font-size: 11px; line-height: 1.4; color: #333; }}
+
+            .header-table {{ width: 100%; border: none; margin-bottom: 20px; }}
+
+            .header-table td {{ border: none; vertical-align: middle; }}
+
+            .logo-left {{ text-align: left; width: 50%; }}
+
+            .logo-right {{ text-align: right; width: 50%; }}
+
+            .logo-img {{ height: 45px; object-fit: contain; }}
+          
             h1 {{ color: #2c3e50; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; }}
             h2 {{ color: #2c3e50; font-size: 16px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
             h3 {{ color: #2c3e50; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold; }}
@@ -364,6 +378,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
