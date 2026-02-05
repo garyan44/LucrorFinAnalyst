@@ -1,4 +1,5 @@
 streamlit
 google-genai
-markdown
 xhtml2pdf
+markdown
+yfinance
