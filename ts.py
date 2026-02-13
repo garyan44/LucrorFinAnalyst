@@ -213,7 +213,7 @@ def generate_company_report(ticker):
     4.  **Rationale (Internal):** AFTER the main report, output a section header called `Appendix`. INCLUDE IT IN THE NEXT PAGE. In this section, detail your thought process, reasoning for credit drivers, and how you located each data point (with URLs). This is for internal use and should NOT appear in the main report.
         -   In this section, you must provide a **"Financial Data Audit"**.
         -   For every year (FY23, FY24, LTM) in the Financial Summary, you must state:
-            * **Exact Document Name:** (e.g., "Ford 2024 10-K")
+            * **Exact Document Name:** (e.g., "Ford 2024 10-K" - https://investor.ford.com/...)
             * **Page Number/Table Name:** (e.g., "Consolidated Statement of Operations, Page 45")
             * **Raw Figure Used:** (e.g., "I saw Revenue = 158,000 in the PDF, so I used 158,000")
             * **Reasoning:** Explain why you assigned it to that specific column (e.g., "The report says 'Fiscal Year Ended Dec 31, 2024', so this goes in the FY2024 column").
@@ -397,6 +397,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
