@@ -118,6 +118,8 @@ def create_pdf(markdown_content, ticker):
     styled_html = f"""
     <html>
     <head>
+        <meta charset="UTF-8">
+
         <style>
             
             @page {{ margin: 0.7in; }}
@@ -158,7 +160,16 @@ def create_pdf(markdown_content, ticker):
     """
     
     pdf_buffer = io.BytesIO()
-    pisa_status = pisa.CreatePDF(io.BytesIO(styled_html.encode("utf-8")), dest=pdf_buffer)
+    
+    pisa_status = pisa.CreatePDF(
+
+        io.BytesIO(styled_html.encode("utf-8")), 
+
+        dest=pdf_buffer,
+
+        encoding='utf-8' 
+
+    )
     
     if pisa_status.err:
         return None
@@ -386,6 +397,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
