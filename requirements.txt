@@ -3,3 +3,5 @@ google-genai
 xhtml2pdf
 markdown
 yfinance
+pandas
+xlsxwriter
