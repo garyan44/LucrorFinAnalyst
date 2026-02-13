@@ -455,11 +455,10 @@ def generate_company_report(ticker):
     3.  **Format:** Output strictly in Markdown. Follow the One-Shot Example structure exactly.
         
     4.  **Audit Trail (CRITICAL):** -   AFTER the main report, output a section header called `### Appendix`.
-
         -   Inside the Appendix, you MUST generate a structured list titled **"Data Source Dictionary"**.
-
-        -   For EVERY row in the Financial Summary table (Revenue, EBITDA, FFO, Net Debt, etc.), provide a specific bullet point in this EXACT format:
-
+        -   **CRITICAL:** You must generate a bullet point for **EVERY SINGLE ROW** in the table, including **Calculated Metrics**, **Margins**, **Ratios**, and **Growth Rates**. Do not skip *any* row.
+        -   Format:
+            * **[Exact Row Name]**: Source: [Document Name/Page] OR Logic: [Formula used]. Raw Value: [Value].
             * **[Item Name]**: Source Document: [Name], Page: [Page #], Raw Value: [Value], Logic: [Explanation].
 
         -   Example:
@@ -760,6 +759,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
