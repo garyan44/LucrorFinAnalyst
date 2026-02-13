@@ -1,3 +1,4 @@
+import streamlit as st
 from google import genai
 from google.genai import types
 import time
@@ -720,6 +721,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
