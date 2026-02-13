@@ -8,6 +8,8 @@ import io
 import re
 import base64
 import yfinance as yf
+import pandas as pd # <--- ADDED for Excel handling
+
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -24,6 +26,136 @@ MY_API_KEY = st.secrets["GENAI_API_KEY"]
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=MY_API_KEY)
+
+    # --- EXCEL GENERATION FUNCTION (NEW) ---
+def create_excel(markdown_content, ticker):
+    """Extracts Financial Summary table and converts to formatted Excel."""
+    try:
+        # 1. LOCATE AND PARSE THE TABLE
+        start_marker = "### Financial Summary"
+        start_pos = markdown_content.find(start_marker)
+        
+        if start_pos == -1: return None
+            
+        # Extract text from that point onwards
+        section_text = markdown_content[start_pos:]
+        lines = section_text.split('\n')
+        table_lines = []
+        capture = False
+        
+        for line in lines:
+            stripped = line.strip()
+            # Start capturing at the header row (contains | Item or | **Item)
+            if "| Item" in stripped or "| **Item" in stripped:
+                capture = True
+            
+            if capture:
+                if stripped.startswith("|"):
+                    table_lines.append(stripped)
+                # Stop if we hit a blank line after starting capture (end of table)
+                elif stripped == "" and len(table_lines) > 0:
+                    break
+        
+        if not table_lines: return None
+
+        # 2. PROCESS MARKDOWN INTO DATAFRAME
+        # Remove the separator line (---|---|---)
+        table_lines = [line for line in table_lines if "---" not in line]
+        
+        # Extract headers (clean * and spaces)
+        headers = [h.strip().replace('*', '') for h in table_lines[0].strip('|').split('|')]
+        
+        data = []
+        for line in table_lines[1:]:
+            # Split by pipe, clean bolding (**), strip whitespace
+            row_vals = [c.strip().replace('**', '') for c in line.strip('|').split('|')]
+            if len(row_vals) == len(headers):
+                data.append(row_vals)
+        
+        df = pd.DataFrame(data, columns=headers)
+        
+        # 3. CLEAN DATA (String -> Number)
+        def clean_financial_num(val):
+            if not isinstance(val, str): return val
+            val = val.strip()
+            if val == "-": return 0
+            
+            # Detect formats
+            is_percent = "%" in val
+            
+            # Remove artifacts
+            clean = val.replace(',', '').replace('%', '').replace('x', '').replace('X', '')
+            
+            # Handle Parentheses for negatives: (1,200) -> -1200
+            if '(' in clean and ')' in clean:
+                clean = clean.replace('(', '').replace(')', '')
+                sign = -1
+            else:
+                sign = 1
+                
+            try:
+                num = float(clean) * sign
+                if is_percent: return num / 100
+                return num
+            except ValueError:
+                return val # Return original text if not a number
+
+        # Apply cleaning to all columns except the first (Item names)
+        for col in df.columns[1:]:
+            df[col] = df[col].apply(clean_financial_num)
+
+        # 4. WRITE TO EXCEL WITH FORMATTING
+        output = io.BytesIO()
+        # Use xlsxwriter engine for rich formatting
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, sheet_name='Financial Summary', index=False)
+            workbook = writer.book
+            worksheet = writer.sheets['Financial Summary']
+            
+            # Define Formats
+            header_fmt = workbook.add_format({'bold': True, 'bottom': 2, 'bg_color': '#F2F2F2', 'font_name': 'Arial', 'font_size': 10})
+            item_fmt = workbook.add_format({'bold': True, 'font_name': 'Arial', 'font_size': 10})
+            # Number formats
+            num_fmt = workbook.add_format({'num_format': '#,##0;(#,##0)', 'font_name': 'Arial', 'font_size': 10}) 
+            pct_fmt = workbook.add_format({'num_format': '0.0%', 'font_name': 'Arial', 'font_size': 10})
+            x_fmt = workbook.add_format({'num_format': '0.00"x"', 'font_name': 'Arial', 'font_size': 10})
+            text_fmt = workbook.add_format({'font_name': 'Arial', 'font_size': 10})
+
+            # Apply Column Widths
+            worksheet.set_column(0, 0, 30) # Item Column
+            worksheet.set_column(1, len(df.columns)-1, 15) # Data Columns
+
+            # Apply Header Format
+            for col_num, value in enumerate(df.columns.values):
+                worksheet.write(0, col_num, value, header_fmt)
+
+            # Row-by-Row Conditional Formatting
+            for i, row in df.iterrows():
+                row_idx = i + 1
+                item_name = str(row[df.columns[0]]).lower()
+                
+                # Write Item Name (First Column)
+                worksheet.write(row_idx, 0, row[df.columns[0]], item_fmt)
+                
+                # Write Data Columns
+                for j, col in enumerate(df.columns[1:]):
+                    col_idx = j + 1
+                    val = row[col]
+                    
+                    if isinstance(val, (int, float)):
+                        if "margin" in item_name or "%" in item_name:
+                            worksheet.write(row_idx, col_idx, val, pct_fmt)
+                        elif "leverage" in item_name or "coverage" in item_name:
+                            worksheet.write(row_idx, col_idx, val, x_fmt)
+                        else:
+                            worksheet.write(row_idx, col_idx, val, num_fmt)
+                    else:
+                        worksheet.write(row_idx, col_idx, val, text_fmt)
+                        
+        return output.getvalue()
+    except Exception as e:
+        st.error(f"Excel Conversion Error: {e}")
+        return None
 
 
 
@@ -356,19 +488,37 @@ if submitted and ticker_input:
             st.markdown("---")
             st.markdown(main_report)
             
-            # --- PDF DOWNLOAD BUTTON ---
-            # We pass 'full_text' to include everything, or 'main_report' for just the clean version.
-            # Here I passed 'full_text' so you get the thinking process in the PDF too.
+            # --- DOWNLOAD BUTTONS (PDF + EXCEL) ---
+            st.markdown("### 📥 Download Report")
+            dl_col1, dl_col2 = st.columns([1, 1])
+            
+            # PDF Button
+
             pdf_data = create_pdf(main_report, ticker_input)
-            if pdf_data:
-                st.download_button(
-                    label="📄 Download Report as PDF",
-                    data=pdf_data,
-                    file_name=f"{ticker_input}_Credit_Report.pdf",
-                    mime="application/pdf"
-                )
-            else:
-                st.warning("⚠️ Could not generate PDF.")
+            with dl_col1:
+                if pdf_data:
+                    st.download_button(
+                        label="📄 Download Report (PDF)",
+                        data=pdf_data,
+                        file_name=f"{ticker_input}_Credit_Report.pdf",
+                        mime="application/pdf"
+                    )
+                else:
+                    st.warning("⚠️ Could not generate PDF.")
+            
+            # Excel Button
+            xls_data = create_excel(main_report, ticker_input)
+            with dl_col2:
+                if xls_data:
+                    st.download_button(
+                        label="📊 Download Financials (Excel)",
+                        data=xls_data,
+                        file_name=f"{ticker_input}_Financials.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.info("⚠️ Financial table not found for Excel.")
+
 
             # 2. Show the "Thinking Mode"
             with st.expander("🧠 AI Thought Process & Sources (Click to Expand)", expanded=False):
@@ -397,6 +547,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
