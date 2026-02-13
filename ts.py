@@ -453,8 +453,22 @@ def generate_company_report(ticker):
         -   $Coverage = FOCF / Net Debt$
     
     3.  **Format:** Output strictly in Markdown. Follow the One-Shot Example structure exactly.
+        
+    4.  **Audit Trail (CRITICAL):** -   AFTER the main report, output a section header called `### Appendix`.
+
+        -   Inside the Appendix, you MUST generate a structured list titled **"Data Source Dictionary"**.
+
+        -   For EVERY row in the Financial Summary table (Revenue, EBITDA, FFO, Net Debt, etc.), provide a specific bullet point in this EXACT format:
+
+            * **[Item Name]**: Source Document: [Name], Page: [Page #], Raw Value: [Value], Logic: [Explanation].
+
+        -   Example:
+
+            * **Revenue**: Source Document: Ford 2024 10-K, Page: 45, Raw Value: 158,000, Logic: Sum of Automotive and Credit revenue.
+
+            * **FFO**: Source Document: Q3 Earnings Release, Page: 8, Raw Value: Calculated, Logic: Net Income (200) + D&A (150).
     
-    4.  **Rationale (Internal):** AFTER the main report, output a section header called `Appendix`. INCLUDE IT IN THE NEXT PAGE. In this section, detail your thought process, reasoning for credit drivers, and how you located each data point (with URLs). This is for internal use and should NOT appear in the main report.
+    5.  **Rationale (Internal):** AFTER the main report, output a section header called `Appendix`. INCLUDE IT IN THE NEXT PAGE. In this section, detail your thought process, reasoning for credit drivers, and how you located each data point (with URLs). This is for internal use and should NOT appear in the main report.
         -   In this section, you must provide a **"Financial Data Audit"**.
         -   For every year (FY23, FY24, LTM) in the Financial Summary, you must state:
             * **Exact Document Name:** (e.g., "Ford 2024 10-K" - https://investor.ford.com/...)
@@ -463,14 +477,14 @@ def generate_company_report(ticker):
             * **Reasoning:** Explain why you assigned it to that specific column (e.g., "The report says 'Fiscal Year Ended Dec 31, 2024', so this goes in the FY2024 column").
         -   **This is to prevent year-shifting errors.**
 
-    5.  **Transparency & Footnotes (NEW REQUIREMENT):**
+    6.  **Transparency & Footnotes (NEW REQUIREMENT):**
         -   **After EVERY section** (Ratings, Description, Financial Summary, Key Credit Drivers), you MUST include a small footnote  starting with "*Source:*" briefly describing where that specific data was found. (Leave one line, for tables of Ratings and Financial Summary, do NOT include "Source" in the table)
         -   **Financial Summary Specificity:** The footnote directly below the Financial Summary table (LEAVE ONE LINE JUST AFTER THE TABLE, DO NOT INCLUDE "Source" (the footnote) IN THE TABLE,) MUST clarify if the figures are from **Audited Financial Statements**, an **Earnings Release**, or **Management Accounts**. This is crucial for replication.
         -   **Ratings Specificity:** The footnote below the Ratings table MUST specify the exact document and date where the ratings were sourced. LEAVE ONE LINE AFTER THE TABLE, BEFORE THE SOURCE DESCRIPTION
-    6. **Data Freshness:** Use ONLY the most recent data available (2024/2025). Do NOT use outdated financials or ratings.
-    7. **Clean Format:** In the section of "Key Credit Drivers", use bullet points for clarity.
-    8. **No Citation Tags:** DO NOT include any text like "" or "[previous search]" or "cite" or "(previous search)" in your output.
-    9. USE BULLET POINTS IN THE "KEY MANAGEMENTS AND CONTACT" SECTION
+    7. **Data Freshness:** Use ONLY the most recent data available (2024/2025). Do NOT use outdated financials or ratings.
+    8. **Clean Format:** In the section of "Key Credit Drivers", use bullet points for clarity.
+    9. **No Citation Tags:** DO NOT include any text like "" or "[previous search]" or "cite" or "(previous search)" in your output.
+    10. USE BULLET POINTS IN THE "KEY MANAGEMENTS AND CONTACT" SECTION
     
 
     ### ONE-SHOT EXAMPLE (STRICTLY FOLLOW THIS TABLE STRUCTURE):
@@ -519,6 +533,12 @@ def generate_company_report(ticker):
     ### Key Credit Drivers
     **Premium brand positioning:** ...
     *Source: Market analysis and JLR November 2025 Debt Investor Presentation.*
+
+    ### Appendix
+    **Data Source Dictionary**
+    * **Revenue**: Source Document: FY2024 Annual Report, Page 88, Raw Value: 28,995, Logic: Extracted directly from Consolidated Income Statement.
+    * **EBITDA**: Source Document: Investor Presentation Slide 12, Raw Value: 3,400, Logic: Reported Adjusted EBITDA.
+    * **FFO**: Source Document: 10-K Cash Flow Stmt, Raw Value: Calculated, Logic: Net Income (1,200) + D&A (1,000).
 
     ### YOUR TASK:
     Now, generate the report for the following ticker using the latest available live data.
@@ -635,30 +655,49 @@ if st.session_state["report_text"]:
         )
 
         # CHECK SELECTION & SHOW AUDIT TRAIL
+# CHECK SELECTION & SHOW AUDIT TRAIL
         if len(selection.selection.rows) > 0:
             selected_row_idx = selection.selection.rows[0]
             selected_item = df_financials.iloc[selected_row_idx][0] # First column is "Item"
             
+            # Remove artifacts from the selected item name (like ** or spaces)
+            clean_selected_item = selected_item.replace("**", "").strip().lower()
+            
             st.markdown(f"### 🔍 Audit Trail for: **{selected_item}**")
             
-            # Search Logic
-            relevant_lines = []
-            rationale_lines = rationale_text.split('\n')
-            found = False
-            search_term = selected_item.replace("**", "").strip()
+            # --- NEW ROBUST PARSING LOGIC ---
+            audit_trail_found = False
             
-            for line in rationale_lines:
-                if search_term.lower() in line.lower():
-                    relevant_lines.append(line)
-                    found = True
+            # Split the Appendix into lines
+            appendix_lines = rationale_text.split('\n')
             
-            if found:
-                container = st.container(border=True)
-                for line in relevant_lines:
-                    highlighted = re.sub(f"({re.escape(search_term)})", r"**:blue[\1]**", line, flags=re.IGNORECASE)
-                    container.markdown(highlighted)
-            else:
-                st.warning(f"No specific audit notes found for '{search_term}' in the Appendix.")
+            for line in appendix_lines:
+                # We look for lines that start with * **Item Name**:
+                # Regex explanation:
+                # ^\s*[\*-] -> Starts with bullet
+                # \s*\*\* -> Followed by bold open
+                # (.*?) -> Capture the Item Name
+                # \*\* -> Followed by bold close
+                match = re.search(r"^\s*[\*-]\s*\*\*(.*?)\*\*", line)
+                
+                if match:
+                    found_item = match.group(1).strip().lower()
+                    
+                    # Check if the line we found matches the row user clicked
+                    # We use "in" logic to handle "EBITDA Margin" vs "EBITDA"
+                    if clean_selected_item == found_item or clean_selected_item in found_item or found_item in clean_selected_item:
+                         
+                        # If match, display the full detail nicely
+                        st.info(line.strip())
+                        audit_trail_found = True
+                        break # Stop searching after first match
+            
+            if not audit_trail_found:
+                # Fallback: If strict parsing fails, show any line containing the word
+                st.warning(f"Exact structured audit entry not found. Showing all mentions of '{selected_item}':")
+                for line in appendix_lines:
+                    if clean_selected_item in line.lower():
+                        st.markdown(f"- {line.strip()}")
         
         # Display everything after the table
         st.markdown(post_table_text)
@@ -721,6 +760,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
