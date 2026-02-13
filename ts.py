@@ -1,4 +1,3 @@
-import streamlit as st
 from google import genai
 from google.genai import types
 import time
@@ -26,6 +25,113 @@ MY_API_KEY = st.secrets["GENAI_API_KEY"]
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=MY_API_KEY)
+    # --- HELPER: PARSE MARKDOWN TABLE (FOR INTERACTIVE DISPLAY) ---
+
+def parse_markdown_table(markdown_content):
+
+    """Parses the Financial Summary markdown table into a Pandas DataFrame."""
+
+    try:
+
+        start_marker = "### Financial Summary"
+
+        start_pos = markdown_content.find(start_marker)
+
+        if start_pos == -1: return None, None, None
+
+
+
+        # Split content into Pre-Table and Table Section
+
+        pre_table_text = markdown_content[:start_pos + len(start_marker)]
+
+        remaining_text = markdown_content[start_pos + len(start_marker):]
+
+
+
+        lines = remaining_text.split('\n')
+
+        table_lines = []
+
+        post_table_lines = []
+
+        capture_table = False
+
+        table_finished = False
+
+
+
+        for line in lines:
+
+            stripped = line.strip()
+
+            # Detect Table Start
+
+            if "| Item" in stripped or "| **Item" in stripped:
+
+                capture_table = True
+
+            
+
+            if capture_table and not table_finished:
+
+                if stripped.startswith("|"):
+
+                    table_lines.append(stripped)
+
+                elif stripped == "" and len(table_lines) > 0:
+
+                    table_finished = True
+
+                elif not stripped.startswith("|") and len(table_lines) > 0:
+
+                    table_finished = True
+
+                    post_table_lines.append(line)
+
+            elif table_finished:
+
+                post_table_lines.append(line)
+
+            else:
+
+                pre_table_text += "\n" + line
+
+
+
+        if not table_lines: return None, None, None
+
+
+
+        # Process Table Data
+
+        table_lines = [line for line in table_lines if "---" not in line]
+
+        headers = [h.strip().replace('*', '') for h in table_lines[0].strip('|').split('|')]
+
+        
+
+        data = []
+
+        for line in table_lines[1:]:
+
+            row_vals = [c.strip().replace('**', '') for c in line.strip('|').split('|')]
+
+            if len(row_vals) == len(headers):
+
+                data.append(row_vals)
+
+        
+
+        df = pd.DataFrame(data, columns=headers)
+
+        post_table_text = "\n".join(post_table_lines)
+
+        return df, pre_table_text, post_table_text
+
+    except Exception as e:
+
+        return None, None, None
 
     # --- EXCEL GENERATION FUNCTION (NEW) ---
 def create_excel(markdown_content, ticker):
@@ -468,101 +574,152 @@ if submitted and ticker_input:
         if isinstance(response_obj, str) and "Error" in response_obj:
             st.error(response_obj)
         else:
-            full_text = response_obj.text
+            # SAVE TO SESSION STATE (Crucial for interactivity)
+            st.session_state["report_text"] = response_obj.text
+            st.session_state["report_ticker"] = ticker_input
+            try:
+                st.session_state["grounding_metadata"] = response_obj.candidates[0].grounding_metadata
+            except:
+                st.session_state["grounding_metadata"] = None
+
+# --- DISPLAY LOGIC (OUTSIDE THE FORM, HANDLES CLICKS) ---
+if st.session_state["report_text"]:
+    full_text = st.session_state["report_text"]
+    current_ticker = st.session_state["report_ticker"]
+    
+    # Split Main Report and Appendix
+    pattern = r"(?i)\n#{1,3}\s+\**Appendix\**.*" 
+    parts = re.split(pattern, full_text, maxsplit=1)
+    
+    if len(parts) > 1:
+        main_report = parts[0].strip()
+        rationale_text = parts[1].strip()
+    else:
+        main_report = full_text
+        rationale_text = ""
+
+    st.success("Analysis Complete")
+    
+    # 1. Logos
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        try:
+            st.image("lucror_logo.png", width=180)
+        except:
+            st.write("**Lucror Analytics**")
+    with col2:
+        domain = get_company_domain(current_ticker)
+        st.markdown(f'<div style="text-align: right;"><img src="https://logo.clearbit.com/{domain}" width="80"></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 2. PARSE AND DISPLAY FINANCIAL SUMMARY WITH TRACING
+    df_financials, pre_table_text, post_table_text = parse_markdown_table(main_report)
+
+    if df_financials is not None:
+        # Display everything before the table
+        st.markdown(pre_table_text)
+        
+        # INTERACTIVE TABLE
+        st.subheader("Interactive Financial Summary")
+        st.info("👆 **Click on any row** to see the source & calculation logic.")
+        
+        # Display Dataframe with Selection
+        selection = st.dataframe(
+            df_financials, 
+            use_container_width=True, 
+            on_select="rerun", 
+            selection_mode="single-row",
+            hide_index=True
+        )
+
+        # CHECK SELECTION & SHOW AUDIT TRAIL
+        if len(selection.selection.rows) > 0:
+            selected_row_idx = selection.selection.rows[0]
+            selected_item = df_financials.iloc[selected_row_idx][0] # First column is "Item"
             
-            # --- SPLIT LOGIC ---
-            split_marker = "### Appendix"
+            st.markdown(f"### 🔍 Audit Trail for: **{selected_item}**")
             
-            pattern = r"(?i)\n#{1,3}\s+\**Appendix\**.*" 
+            # Search Logic
+            relevant_lines = []
+            rationale_lines = rationale_text.split('\n')
+            found = False
+            search_term = selected_item.replace("**", "").strip()
             
-            # Use re.split to chop the text at that pattern
-            parts = re.split(pattern, full_text, maxsplit=1)
+            for line in rationale_lines:
+                if search_term.lower() in line.lower():
+                    relevant_lines.append(line)
+                    found = True
             
-            if len(parts) > 1:
-                main_report = parts[0].strip()
-                # We re-add the header to the appendix so it looks nice in the expander
-                rationale_text = "### Appendix\n" + parts[1].strip()
+            if found:
+                container = st.container(border=True)
+                for line in relevant_lines:
+                    highlighted = re.sub(f"({re.escape(search_term)})", r"**:blue[\1]**", line, flags=re.IGNORECASE)
+                    container.markdown(highlighted)
             else:
-                main_report = full_text
-                rationale_text = "No specific rationale generated."
+                st.warning(f"No specific audit notes found for '{search_term}' in the Appendix.")
+        
+        # Display everything after the table
+        st.markdown(post_table_text)
+    else:
+        # Fallback
+        st.markdown(main_report)
+    
+    # 3. Download Buttons
+    st.markdown("### 📥 Download Report")
+    dl_col1, dl_col2 = st.columns([1, 1])
+    
+    pdf_data = create_pdf(main_report, current_ticker)
+    with dl_col1:
+        if pdf_data:
+            st.download_button(
+                label="📄 Download Report (PDF)",
+                data=pdf_data,
+                file_name=f"{current_ticker}_Credit_Report.pdf",
+                mime="application/pdf"
+            )
+        else:
+            st.warning("⚠️ Could not generate PDF.")
+    
+    xls_data = create_excel(main_report, current_ticker)
+    with dl_col2:
+        if xls_data:
+            st.download_button(
+                label="📊 Download Financials (Excel)",
+                data=xls_data,
+                file_name=f"{current_ticker}_Financials.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.info("⚠️ Financial table not found for Excel.")
 
-            # 1. Show the Main Report
-            st.success("Analysis Complete")
-                        # 1. UI HEADER LOGOS
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                try:
-                    st.image("lucror_logo.png", width=180)
-                except:
-                    st.write("**Lucror Analytics**")
-            with col2:
-                domain = get_company_domain(ticker_input)
-                st.markdown(f'<div style="text-align: right;"><img src="https://logo.clearbit.com/{domain}" width="80"></div>', unsafe_allow_html=True)
-
-
-            st.markdown("---")
-            st.markdown(main_report)
+    # 4. Thinking Mode
+    with st.expander("🧠 AI Thought Process & Sources (Click to Expand)", expanded=False):
+        st.markdown("### Appendix: AI Rationale & Data Sources")
+        st.markdown(rationale_text)
+        
+        st.markdown("---")
+        st.markdown("### 2. Live Search Data")
+        
+        metadata = st.session_state["grounding_metadata"]
+        if metadata:
+            if metadata.web_search_queries:
+                st.markdown("**🔍 Search Queries Issued:**")
+                for q in metadata.web_search_queries:
+                    st.code(q, language="text")
             
-            # --- DOWNLOAD BUTTONS (PDF + EXCEL) ---
-            st.markdown("### 📥 Download Report")
-            dl_col1, dl_col2 = st.columns([1, 1])
-            
-            # PDF Button
-
-            pdf_data = create_pdf(main_report, ticker_input)
-            with dl_col1:
-                if pdf_data:
-                    st.download_button(
-                        label="📄 Download Report (PDF)",
-                        data=pdf_data,
-                        file_name=f"{ticker_input}_Credit_Report.pdf",
-                        mime="application/pdf"
-                    )
-                else:
-                    st.warning("⚠️ Could not generate PDF.")
-            
-            # Excel Button
-            xls_data = create_excel(main_report, ticker_input)
-            with dl_col2:
-                if xls_data:
-                    st.download_button(
-                        label="📊 Download Financials (Excel)",
-                        data=xls_data,
-                        file_name=f"{ticker_input}_Financials.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                else:
-                    st.info("⚠️ Financial table not found for Excel.")
-
-
-            # 2. Show the "Thinking Mode"
-            with st.expander("🧠 AI Thought Process & Sources (Click to Expand)", expanded=False):
-                st.markdown("### Appendix: AI Rationale & Data Sources")
-                st.markdown(rationale_text.strip())
-                
-                st.markdown("---")
-                st.markdown("### 2. Live Search Data")
-                
-                try:
-                    metadata = response_obj.candidates[0].grounding_metadata
-                    if metadata and metadata.web_search_queries:
-                        st.markdown("**🔍 Search Queries Issued:**")
-                        for q in metadata.web_search_queries:
-                            st.code(q, language="text")
-                    
-                    if metadata and metadata.grounding_chunks:
-                        st.markdown("**🌐 Sources Verified:**")
-                        unique_urls = set()
-                        for chunk in metadata.grounding_chunks:
-                            if chunk.web:
-                                unique_urls.add(f"- [{chunk.web.title}]({chunk.web.uri})")
-                        for url_md in list(unique_urls)[:7]:
-                            st.markdown(url_md)
-                except Exception:
-                    st.info("No detailed grounding metadata available.")
+            if metadata.grounding_chunks:
+                st.markdown("**🌐 Sources Verified:**")
+                unique_urls = set()
+                for chunk in metadata.grounding_chunks:
+                    if chunk.web:
+                        unique_urls.add(f"- [{chunk.web.title}]({chunk.web.uri})")
+                for url_md in list(unique_urls)[:7]:
+                    st.markdown(url_md)
+        else:
+             st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
-
 
 
 
