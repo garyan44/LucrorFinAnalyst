@@ -656,48 +656,48 @@ if st.session_state["report_text"]:
 
         # CHECK SELECTION & SHOW AUDIT TRAIL
 # CHECK SELECTION & SHOW AUDIT TRAIL
+# CHECK SELECTION & SHOW AUDIT TRAIL
         if len(selection.selection.rows) > 0:
             selected_row_idx = selection.selection.rows[0]
             selected_item = df_financials.iloc[selected_row_idx][0] # First column is "Item"
             
-            # Remove artifacts from the selected item name (like ** or spaces)
-            clean_selected_item = selected_item.replace("**", "").strip().lower()
+            # 1. Clean the clicked item name (e.g. "**Revenue**" -> "revenue")
+            # We also split by "(" to handle "EBITDA (adj.)" -> just search for "ebitda"
+            clean_search_term = selected_item.replace("**", "").split("(")[0].strip().lower()
             
             st.markdown(f"### 🔍 Audit Trail for: **{selected_item}**")
             
-            # --- NEW ROBUST PARSING LOGIC ---
-            audit_trail_found = False
-            
-            # Split the Appendix into lines
+            # 2. Scan the AI's thought process (Appendix)
             appendix_lines = rationale_text.split('\n')
+            found_entries = []
             
             for line in appendix_lines:
-                # We look for lines that start with * **Item Name**:
-                # Regex explanation:
-                # ^\s*[\*-] -> Starts with bullet
-                # \s*\*\* -> Followed by bold open
-                # (.*?) -> Capture the Item Name
-                # \*\* -> Followed by bold close
-                match = re.search(r"^\s*[\*-]\s*\*\*(.*?)\*\*", line)
+                line_lower = line.lower()
                 
-                if match:
-                    found_item = match.group(1).strip().lower()
-                    
-                    # Check if the line we found matches the row user clicked
-                    # We use "in" logic to handle "EBITDA Margin" vs "EBITDA"
-                    if clean_selected_item == found_item or clean_selected_item in found_item or found_item in clean_selected_item:
-                         
-                        # If match, display the full detail nicely
-                        st.info(line.strip())
-                        audit_trail_found = True
-                        break # Stop searching after first match
-            
-            if not audit_trail_found:
-                # Fallback: If strict parsing fails, show any line containing the word
-                st.warning(f"Exact structured audit entry not found. Showing all mentions of '{selected_item}':")
+                # ROBUST MATCHING LOGIC:
+                # 1. Does the line contain the item name? (e.g. "revenue")
+                # 2. Does the line contain "source" or "document"? (To ensure it's a citation)
+                # 3. Does it look like a list item? (Starts with * or -)
+                if clean_search_term in line_lower and ("source" in line_lower or "document" in line_lower) and (line.strip().startswith("*") or line.strip().startswith("-")):
+                    found_entries.append(line.strip())
+
+            # 3. Display Results
+            if found_entries:
+                for entry in found_entries:
+                    # formatting: highlight the search term for visibility
+                    formatted_entry = re.sub(f"(?i)({re.escape(clean_search_term)})", r"**:blue[\1]**", entry)
+                    st.info(formatted_entry)
+            else:
+                st.warning(f"Could not trace exact source for '{clean_search_term}'. Showing raw references found:")
+                # Fallback: Show ANY line with the word, even if it doesn't look like a source
+                fallback_found = False
                 for line in appendix_lines:
-                    if clean_selected_item in line.lower():
+                    if clean_search_term in line.lower():
                         st.markdown(f"- {line.strip()}")
+                        fallback_found = True
+                
+                if not fallback_found:
+                    st.error("No mention of this item found in the AI's audit trail.")
         
         # Display everything after the table
         st.markdown(post_table_text)
@@ -760,6 +760,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
