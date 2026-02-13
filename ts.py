@@ -180,6 +180,7 @@ def generate_company_report(ticker):
             * "{ticker} Moody's rating press release 2024 2025"
             * "{ticker} Fitch rating action commentary"
             * Look for the company's latest **Debt Investor Presentation** or **10-K** (Liquidity/Capital Resources section).
+        -   **Year Verification:** Before extracting ANY number, verify the **Fiscal Year End**. (e.g., Does Microsoft's FY24 end in June 2024? If so, label it 2024. Do NOT shift it to 2023).
         -   **Financials:** Search for "{ticker} Investor Presentation Q3 2025" (or latest available) to get the most recent LTM numbers.
         -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact".
             * **STRICT FORMATTING:** You MUST use a standard Markdown list.
@@ -199,6 +200,13 @@ def generate_company_report(ticker):
     3.  **Format:** Output strictly in Markdown. Follow the One-Shot Example structure exactly.
     
     4.  **Rationale (Internal):** AFTER the main report, output a section header called `Appendix`. INCLUDE IT IN THE NEXT PAGE. In this section, detail your thought process, reasoning for credit drivers, and how you located each data point (with URLs). This is for internal use and should NOT appear in the main report.
+        -   In this section, you must provide a **"Financial Data Audit"**.
+        -   For every year (FY23, FY24, LTM) in the Financial Summary, you must state:
+            * **Exact Document Name:** (e.g., "Ford 2024 10-K")
+            * **Page Number/Table Name:** (e.g., "Consolidated Statement of Operations, Page 45")
+            * **Raw Figure Used:** (e.g., "I saw Revenue = 158,000 in the PDF, so I used 158,000")
+            * **Reasoning:** Explain why you assigned it to that specific column (e.g., "The report says 'Fiscal Year Ended Dec 31, 2024', so this goes in the FY2024 column").
+        -   **This is to prevent year-shifting errors.**
 
     5.  **Transparency & Footnotes (NEW REQUIREMENT):**
         -   **After EVERY section** (Ratings, Description, Financial Summary, Key Credit Drivers), you MUST include a small footnote  starting with "*Source:*" briefly describing where that specific data was found. (Leave one line, for tables of Ratings and Financial Summary, do NOT include "Source" in the table)
@@ -378,6 +386,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
