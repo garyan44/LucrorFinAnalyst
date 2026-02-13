@@ -325,6 +325,11 @@ def generate_company_report(ticker):
             * Look for the company's latest **Debt Investor Presentation** or **10-K** (Liquidity/Capital Resources section).
         -   **Year Verification:** Before extracting ANY number, verify the **Fiscal Year End**. (e.g., Does Microsoft's FY24 end in June 2024? If so, label it 2024. Do NOT shift it to 2023).
         -   **Financials:** Search for "{ticker} Investor Presentation Q3 2025" (or latest available) to get the most recent LTM numbers.
+        -   **Specific Cash Flow Items:** You must look for the Cash Flow Statement to find:
+
+            * "Net cash provided by operating activities" (or "Net cash from operations")
+
+            * "Acquisition of property, plant and equipment" (Capex) AND "Acquisition of intangible assets". Sum them if separate.
         -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact".
             * **STRICT FORMATTING:** You MUST use a standard Markdown list.
             * Do NOT format inline (e.g., do not output "* CEO: ... * CFO: ...").
@@ -335,7 +340,7 @@ def generate_company_report(ticker):
         -   $EBITDA = Operating Income + D&A$
         -   $EBITDA Margin = EBITDA / Revenue$
         -   $FFO = Net Income + D&A$
-        -   $FOCF = OCF - Capex$
+        -   $FOCF = (Net cash provided by operating activities) - (Acquisition of PP&E and intangibles)$
         -   $Net Debt = Total Debt - Cash$
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
@@ -395,9 +400,9 @@ def generate_company_report(ticker):
     | **EBITDA** | 2,500 | 3,400 | 3,650 |
     | **EBITDA Margin** | 11.2% | 11.7% | 12.4% |
     | **FFO** | 1,800 | 2,200 | 2,400 |
-    | **OCF (Operating Cash Flow)** | 1,500 | 2,000 | 2,100 |
-    | **Capex** | (1,200) | (1,300) | (1,400) |
-    | **FOCF (OCF-Capex)** | 300 | 700 | 700 |
+    | **Net cash provided by operating activities** | 1,500 | 2,000 | 2,100 |
+    | **(-) Acquisition of PP&E and intangible assets** | (1,200) | (1,300) | (1,400) |
+    | **FOCF** | 300 | 700 | 700 |
     | **Net Debt** | 4,200 | 3,800 | 3,500 |
     | **Net Leverage (Net Debt/EBITDA)** | 1.68x | 1.12x | 0.96x |
     | **Coverage (FOCF/Net Debt)** | 0.07x | 0.18x | 0.20x |
@@ -440,6 +445,16 @@ def generate_company_report(ticker):
 # --- FRONTEND USER INTERFACE ---
 st.title("📊 Financial Analyst")
 st.markdown("Enter a ticker (e.g., `TSLA`, `F`, `HOG`) to generate a credit report.")
+
+# --- SESSION STATE INITIALIZATION ---
+if "report_text" not in st.session_state:
+    st.session_state["report_text"] = None
+if "report_ticker" not in st.session_state:
+    st.session_state["report_ticker"] = None
+if "grounding_metadata" not in st.session_state:
+    st.session_state["grounding_metadata"] = None
+
+
 
 with st.form("ticker_form"):
     ticker_input = st.text_input("Company Ticker:", placeholder="e.g. F").upper()
@@ -547,6 +562,7 @@ if submitted and ticker_input:
                     st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
