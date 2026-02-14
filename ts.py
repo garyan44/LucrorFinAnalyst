@@ -425,22 +425,28 @@ def generate_company_report(ticker):
 
     ### INSTRUCTIONS:
     1.  **Search Strategy (CRITICAL):**
-        -   **Ratings:** Do NOT just search for "Credit Rating". Search specifically for:
-            * "{ticker} Investor Relations credit ratings"
-            * "{ticker} Moody's rating press release 2024 2025"
-            * "{ticker} Fitch rating action commentary"
-            * Look for the company's latest **Debt Investor Presentation** or **10-K** (Liquidity/Capital Resources section).
-        -   **Year Verification:** Before extracting ANY number, verify the **Fiscal Year End**. (e.g., Does Microsoft's FY24 end in June 2024? If so, label it 2024. Do NOT shift it to 2023).
-        -   **Financials:** Search for "{ticker} Investor Presentation Q3 2025" (or latest available) to get the most recent LTM numbers.
-        -   **Specific Cash Flow Items:** You must look for the Cash Flow Statement to find:
-
+        -   **Primary Source (Boss's Orders):** Search specifically for **"{ticker} Investor Relations"** to identify the official financial reporting hub.
+        -   **Ratings:** Search for "{ticker} credit rating Moody's Fitch S&P press release 2024 2025".
+        -   **Fiscal Year Verification:** First, identify the company's Fiscal Year End. (e.g., If FY24 ends in March 2024, label that column FY2024).
+        -   **Historical Data (Crucial):**
+            * Search for "{ticker} Annual Report 2022 10-K" to get FY2022 data.
+            * Search for "{ticker} Annual Report 2023 10-K" to get FY2023 data.
+            * Search for "{ticker} Full Year 2024 Earnings Release" or "2024 10-K" to get FY2024 data.
+        -   **Specific Cash Flow Items:**
             * "Net cash provided by operating activities" (or "Net cash from operations")
+            * "Capex" = (Purchase of PP&E + Purchase of Intangible Assets).
+        -   **Management:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations contact".
 
-            * "Acquisition of property, plant and equipment" (Capex) AND "Acquisition of intangible assets". Sum them if separate.
-        -   **Management & Contact:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations email address contact".
-            * **STRICT FORMATTING:** You MUST use a standard Markdown list.
-            * Do NOT format inline (e.g., do not output "* CEO: ... * CFO: ...").
-            * Ensure there is a newline character before every bullet point.
+    2.  **Calculations & Definitions (STRICT):**
+        -   **Revenue:** Total Revenue / Net Sales.
+        -   **EBITDA:** You MUST use **"Adjusted EBITDA"** if the company reports it. If not, calculate: (Operating Income + Depreciation & Amortization).
+        -   **EBITDA Margin:** EBITDA / Revenue.
+        -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
+        -   **FOCF (Free Operating Cash Flow):** (Net Cash from Operations) - (Capex).
+        -   **Net Debt:** (Short-term Debt + Long-term Debt + Finance Leases) - (Cash & Cash Equivalents).
+            * *Note:* Do NOT subtract Restricted Cash.
+        -   **Net Leverage:** Net Debt / EBITDA.
+        -   **Coverage:** FOCF / Net Debt.
     
     
     2.  **Calculations (MANDATORY):**
@@ -514,18 +520,18 @@ def generate_company_report(ticker):
     ### Financial Summary
     *In GBP mn*
 
-    | Item | FY2023 | FY2024 | LTM |
+    | Item | FY2022 | FY2023 | FY2024 |
     | :--- | :--- | :--- | :--- |
-    | **Revenue** | 22,295 | 28,995 | 29,500 |
-    | **EBITDA** | 2,500 | 3,400 | 3,650 |
-    | **EBITDA Margin** | 11.2% | 11.7% | 12.4% |
-    | **FFO** | 1,800 | 2,200 | 2,400 |
-    | **Net cash provided by operating activities** | 1,500 | 2,000 | 2,100 |
-    | **(-) Acquisition of PP&E and intangible assets** | (1,200) | (1,300) | (1,400) |
-    | **FOCF** | 300 | 700 | 700 |
-    | **Net Debt** | 4,200 | 3,800 | 3,500 |
-    | **Net Leverage (Net Debt/EBITDA)** | 1.68x | 1.12x | 0.96x |
-    | **Coverage (FOCF/Net Debt)** | 0.07x | 0.18x | 0.20x |
+    | **Revenue** | 18,320 | 22,809 | 28,995 |
+    | **EBITDA** | 2,050 | 2,500 | 3,400 |
+    | **EBITDA Margin** | 11.2% | 11.0% | 11.7% |
+    | **FFO** | 1,400 | 1,800 | 2,200 |
+    | **Net cash provided by operating activities** | 1,100 | 1,500 | 2,000 |
+    | **(-) Acquisition of PP&E and intangible assets** | (1,000) | (1,200) | (1,300) |
+    | **FOCF** | 100 | 300 | 700 |
+    | **Net Debt** | 4,500 | 4,200 | 3,800 |
+    | **Net Leverage (Net Debt/EBITDA)** | 2.2x | 1.68x | 1.12x |
+    | **Coverage (FOCF/Net Debt)** | 0.02x | 0.07x | 0.18x |
 
     *Source: Figures for FY23/24 derived from Audited Financial Statements; LTM figures derived from Q3 2025 Earnings Release (Management Accounts).*
 
@@ -759,6 +765,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
