@@ -438,8 +438,10 @@ def generate_company_report(ticker):
         -   **Management:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations contact".
 
     2.  **Calculations & Definitions (STRICT):**
-        -   **Revenue:** Total Revenue / Net Sales.
-        -   **EBITDA:** You MUST use **"Adjusted EBITDA"** if the company reports it. If not, calculate: (Operating Income + Depreciation & Amortization).
+        -   **Revenue:** Extract the exact **"Sales revenues"** or **"Net operating revenues"** line strictly from the **Consolidated Statement of Income** table.
+            * **CRITICAL:** Do NOT use numbers from the "Financial Highlights", "Key Figures", or "Gross Revenue" sections. Use the GAAP/IFRS table value only.
+        -   **EBITDA:** You MUST use **"Adjusted EBITDA"** if the company reports it (often in the "Reconciliation" or "Non-GAAP" section).
+            * If not reported, calculate: (Operating Income + Depreciation & Amortization).
         -   **EBITDA Margin:** EBITDA / Revenue.
         -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
         -   **FOCF (Free Operating Cash Flow):** (Net Cash from Operations) - (Capex).
@@ -765,6 +767,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
