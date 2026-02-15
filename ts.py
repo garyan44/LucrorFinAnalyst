@@ -428,6 +428,7 @@ def generate_company_report(ticker):
         -   **Primary Source (Boss's Orders):** Search specifically for **"{ticker} Investor Relations"** to identify the official financial reporting hub.
         -   **Ratings:** Search for "{ticker} credit rating Moody's Fitch S&P press release 2024 2025".
         -   **Fiscal Year Verification:** First, identify the company's Fiscal Year End. (e.g., If FY24 ends in March 2024, label that column FY2024).
+        -   **Non-GAAP Data (THE "MAGIC" KEY):** Search specifically for **"{ticker} Adjusted EBITDA reconciliation table 2024"** or **"{ticker} Non-GAAP measures"**. This is where the correct EBITDA figure lives.        
         -   **Historical Data (Crucial):**
             * Search for "{ticker} Annual Report 2022 10-K" to get FY2022 data.
             * Search for "{ticker} Annual Report 2023 10-K" to get FY2023 data.
@@ -440,14 +441,16 @@ def generate_company_report(ticker):
     2.  **Calculations & Definitions (STRICT):**
         -   **Revenue:** Extract the exact **"Sales revenues"** or **"Net operating revenues"** line strictly from the **Consolidated Statement of Income** table.
             * **CRITICAL:** Do NOT use numbers from the "Financial Highlights", "Key Figures", or "Gross Revenue" sections. Use the GAAP/IFRS table value only.
-        -   **EBITDA:** You MUST use **"Adjusted EBITDA"** if the company reports it (often in the "Reconciliation" or "Non-GAAP" section).
-            * If not reported, calculate: (Operating Income + Depreciation & Amortization).
-        -   **EBITDA Margin:** EBITDA / Revenue.
+        -   **EBITDA (THE PRIORITY):** * **Step 1:** Look for a table labeled **"Reconciliation of Adjusted EBITDA"** or **"Non-GAAP Reconciliations"**.
+            * **Step 2:** You MUST use the pre-calculated value labeled **"Adjusted EBITDA"** from that table. 
+            * **Step 3:** **DO NOT CALCULATE EBITDA MANUALLY** unless you are absolutely certain the company does not report Adjusted EBITDA.
+            * *Reason:* Manual calculations (Operating Income + D&A) often miss "Impairment" and "Legal Provisions," resulting in wrong numbers.
+        -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
         -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
         -   **FOCF (Free Operating Cash Flow):** (Net Cash from Operations) - (Capex).
         -   **Net Debt:** (Short-term Debt + Long-term Debt + Finance Leases) - (Cash & Cash Equivalents).
             * *Note:* Do NOT subtract Restricted Cash.
-        -   **Net Leverage:** Net Debt / EBITDA.
+        -   **Net Leverage:** Net Debt / Adjusted EBITDA.
         -   **Coverage:** FOCF / Net Debt.
     
     
@@ -767,6 +770,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
