@@ -448,12 +448,17 @@ def generate_company_report(ticker):
           Assign data to FY2022 / FY2023 / FY2024 strictly based on the stated fiscal year,
           NOT the calendar year or publication date.
         
-        - **Non-GAAP Data (THE “MAGIC” KEY – EBITDA):**
-          Search specifically for:
-          - **"{ticker} Adjusted EBITDA reconciliation"**
-          - **"{ticker} Non-GAAP measures reconciliation"**
-          Use the company-reported **Adjusted EBITDA** value from the reconciliation table.
-          Do NOT manually calculate EBITDA unless the company explicitly does not report it.
+       - **EBITDA Source Rule (NON-NEGOTIABLE):**
+          For each year (FY2022/FY2023/FY2024), you MUST extract EBITDA/Adjusted EBITDA from the SAME annual filing
+          (Form 10-K or Form 20-F) that you used for Revenue for that year.
+          Search WITHIN that filing for: "Adjusted EBITDA", "EBITDA", "Performance measures", "Non-GAAP measures".
+        
+          ONLY if the annual filing does NOT disclose an explicit EBITDA/Adjusted EBITDA figure,
+          then use an OFFICIAL company IR earnings release / investor presentation as a fallback.
+        
+          DO NOT use third-party aggregators (Macrotrends, Yahoo Finance, StockAnalysis, etc.) for EBITDA.
+          If you cannot find it in official sources, output "N/A".
+
         
         - **Cash Flow & Capex (STATEMENT-LEVEL DATA ONLY):**
           Extract the following strictly from the **Consolidated Statement of Cash Flows**:
@@ -501,13 +506,16 @@ def generate_company_report(ticker):
     
     
     2.  **Calculations (MANDATORY):**
-        -   $EBITDA = Operating Income + D&A$
         -   $EBITDA Margin = EBITDA / Revenue$
         -   $FFO = Net Income + D&A$
         -   $FOCF = (Net cash provided by operating activities) - (Acquisition of PP&E and intangibles)$
         -   $Net Debt = Total Debt - Cash$
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
+        **IMPORTANT:** EBITDA must be taken from an explicitly reported "EBITDA" or "Adjusted EBITDA" figure in an official filing.
+        Do NOT compute EBITDA as Operating Income + D&A unless you explicitly label it as an estimate and only if no reported EBITDA exists.
+
+        
     
     3.  **Format:** Output strictly in Markdown. Follow the One-Shot Example structure exactly.
         
@@ -816,6 +824,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
