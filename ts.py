@@ -477,10 +477,20 @@ def generate_company_report(ticker):
     2.  **Calculations & Definitions (STRICT):**
         -   **Revenue:** Extract the exact **"Sales revenues"** or **"Net operating revenues"** line strictly from the **Consolidated Statement of Income** table.
             * **CRITICAL:** Do NOT use numbers from the "Financial Highlights", "Key Figures", or "Gross Revenue" sections. Use the GAAP/IFRS table value only.
-        -   **EBITDA (THE PRIORITY):** * **Step 1:** Look for a table labeled **"Reconciliation of Adjusted EBITDA"** or **"Non-GAAP Reconciliations"**.
-            * **Step 2:** You MUST use the pre-calculated value labeled **"Adjusted EBITDA"** from that table. 
-            * **Step 3:** **DO NOT CALCULATE EBITDA MANUALLY** unless you are absolutely certain the company does not report Adjusted EBITDA.
-            * *Reason:* Manual calculations (Operating Income + D&A) often miss "Impairment" and "Legal Provisions," resulting in wrong numbers.
+        - **EBITDA (STRICT DOCUMENT CONSISTENCY RULE):**
+          First, search for **"Adjusted EBITDA" explicitly within the SAME annual regulatory filing
+          (Form 10-K or Form 20-F) used to extract Revenue for that fiscal year.**
+        
+          If an "Adjusted EBITDA" or "EBITDA" table exists in that filing (including notes,
+          segment information, or performance measures sections),
+          you MUST use that value.
+        
+          ONLY if the annual filing does NOT contain an explicit Adjusted EBITDA figure,
+          then search for a separate "Adjusted EBITDA reconciliation" in earnings releases
+          or investor presentations.
+        
+          DO NOT calculate EBITDA manually if an explicit value exists in the annual filing.
+
         -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
         -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
         -   **FOCF (Free Operating Cash Flow):** (Net Cash from Operations) - (Capex).
@@ -806,6 +816,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
