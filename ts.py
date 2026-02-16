@@ -424,19 +424,55 @@ def generate_company_report(ticker):
     Your goal is to produce a deep-dive company credit report that matches the EXACT format below.
 
     ### INSTRUCTIONS:
-    1.  **Search Strategy (CRITICAL):**
-        -   **Primary Source (Boss's Orders):** Search specifically for **"{ticker} Investor Relations"** to identify the official financial reporting hub.
-        -   **Ratings:** Search for "{ticker} credit rating Moody's Fitch S&P press release 2024 2025".
-        -   **Fiscal Year Verification:** First, identify the company's Fiscal Year End. (e.g., If FY24 ends in March 2024, label that column FY2024).
-        -   **Non-GAAP Data (THE "MAGIC" KEY):** Search specifically for **"{ticker} Adjusted EBITDA reconciliation table 2024"** or **"{ticker} Non-GAAP measures"**. This is where the correct EBITDA figure lives.        
-        -   **Historical Data (Crucial):**
-            * Search for "{ticker} Annual Report 2022 10-K" to get FY2022 data.
-            * Search for "{ticker} Annual Report 2023 10-K" to get FY2023 data.
-            * Search for "{ticker} Full Year 2024 Earnings Release" or "2024 10-K" to get FY2024 data.
-        -   **Specific Cash Flow Items:**
-            * "Net cash provided by operating activities" (or "Net cash from operations")
-            * "Capex" = (Purchase of PP&E + Purchase of Intangible Assets).
-        -   **Management:** Search for "{ticker} CEO CFO name 2025" and "{ticker} Investor Relations contact".
+    1. **Search Strategy (CRITICAL):**
+        
+        - **Primary Source (Boss’s Orders):**
+          Search specifically for **"{ticker} Investor Relations"** to locate the company’s official investor relations website.
+          Use this site as the anchor for all financial documents.
+        
+        - **Regulatory Filings (MANDATORY – DO NOT SKIP):**
+          Identify the company’s primary annual regulatory filing.
+          - U.S. issuers: **Form 10-K**
+          - Foreign private issuers / ADRs: **Form 20-F**
+          Use ONLY these filings for audited financial statement data.
+        
+        - **Historical Financial Data (CRUCIAL):**
+          - Search for **"{ticker} Form 10-K (FY2022)" OR "{ticker} Form 20-F (FY2022)"**
+          - Search for **"{ticker} Form 10-K (FY2023)" OR "{ticker} Form 20-F (FY2023)"**
+          - Search for **"{ticker} Form 10-K (FY2024)" OR "{ticker} Form 20-F (FY2024)"**
+          Use the company’s primary annual filing for each fiscal year.
+          Do NOT rely on documents labeled only as “Annual Report” unless they explicitly contain the audited financial statements.
+        
+        - **Fiscal Year Verification (NON-NEGOTIABLE):**
+          First, identify the company’s fiscal year end from the filing.
+          Assign data to FY2022 / FY2023 / FY2024 strictly based on the stated fiscal year,
+          NOT the calendar year or publication date.
+        
+        - **Non-GAAP Data (THE “MAGIC” KEY – EBITDA):**
+          Search specifically for:
+          - **"{ticker} Adjusted EBITDA reconciliation"**
+          - **"{ticker} Non-GAAP measures reconciliation"**
+          Use the company-reported **Adjusted EBITDA** value from the reconciliation table.
+          Do NOT manually calculate EBITDA unless the company explicitly does not report it.
+        
+        - **Cash Flow & Capex (STATEMENT-LEVEL DATA ONLY):**
+          Extract the following strictly from the **Consolidated Statement of Cash Flows**:
+          - **Net cash provided by operating activities** (or equivalent wording)
+          - **Capex**, defined as:
+            - Purchase of Property, Plant & Equipment
+            - PLUS Purchase of Intangible Assets
+        
+        - **Credit Ratings:**
+          Search for **"{ticker} Moody’s credit rating"**, **"{ticker} S&P credit rating"**, and **"{ticker} Fitch credit rating"**.
+          Use the most recent rating action press releases (2024–2025).
+        
+        - **Management & Investor Relations Contact:**
+          Search for:
+          - **"{ticker} CEO"**
+          - **"{ticker} CFO"**
+          - **"{ticker} Investor Relations contact"**
+          Prefer the official company or investor relations website.
+
 
     2.  **Calculations & Definitions (STRICT):**
         -   **Revenue:** Extract the exact **"Sales revenues"** or **"Net operating revenues"** line strictly from the **Consolidated Statement of Income** table.
@@ -770,6 +806,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
