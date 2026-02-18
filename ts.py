@@ -508,13 +508,21 @@ def generate_company_report(ticker):
             *Capex MUST be taken from the investing cash flow line explicitly labeled like "Acquisition of PP&E and intangible assets" (or equivalent).
             *Do NOT add/remove other investing items (no equity interests, no acquisitions, no disposals) unless explicitly shown in the same table.
         
-        - **Net Debt (STRICT – MUST MATCH COMPANY-DEFINITION):**
-            Step 1 (priority): Search the FY2024 annual filing (10-K/20-F) for an explicitly reported "Net debt" figure or a "Net debt" definition table.
-            If found, you MUST use the company's reported Net Debt number (do NOT compute your own).
-            Step 2 (only if not explicitly reported): Compute Net Debt using the company's definition in the filing. If no definition exists, use:
-            Net Debt = (Short-term debt + Long-term debt + Lease liabilities) - Cash & cash equivalents.
-            CRITICAL Petrobras rule: If the filing defines Net Debt as Gross Debt - Adjusted Cash and Cash Equivalents, use that EXACTLY.
-            Do NOT use unadjusted cash if "Adjusted cash" is given.
+        -   **Net Debt (STRICT – Petrobras / screenshot definition):**
+            You MUST compute Net Debt using this exact Petrobras definition from the FY2024 20-F:
+            1) Gross Debt = Finance debt + Lease liabilities (IFRS 16)
+            2) Net Debt = Gross Debt - Adjusted Cash and Cash Equivalents
+        
+            CRITICAL:
+            - Do NOT use other “net debt” KPIs found in notes (e.g., Note 25) if they do NOT reconcile to Gross Debt - Adjusted Cash.
+            - You MUST show the reconciliation math in the Appendix:
+            Finance debt (value) + Lease liabilities (value) = Gross Debt (value)
+            Gross Debt (value) - Adjusted Cash & Cash Equivalents (value) = Net Debt (value)
+        
+            For FY2022 and FY2023: use the SAME definition and compute from the filing using:
+            Finance debt + Lease liabilities - Adjusted Cash & Cash Equivalents (if provided).
+            If Adjusted Cash is not provided for a year, then use the filing’s explicitly reported Net Debt ONLY IF it is part of the same Gross Debt - Adjusted Cash reconciliation section.
+
 
 
         -   **Net Leverage:** Net Debt / Adjusted EBITDA.
@@ -526,7 +534,7 @@ def generate_company_report(ticker):
         -   $FFO = Net Income + D&A$
         -   $OCF(post-interest) = (Net cash provided by operating activities) - (Interest paid)$
         -   $FOCF = OCF(post-interest) - (Acquisition of PP&E and intangible assets)$
-        - $Net Debt = (Gross Debt as defined by company) - (Adjusted Cash & Cash Equivalents, if defined)$
+        -   $Net Debt = (Finance debt + Lease liabilities) - (Adjusted Cash & Cash Equivalents)$
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
         **IMPORTANT:** EBITDA must be taken from an explicitly reported "EBITDA" or "Adjusted EBITDA" figure in an official filing.
@@ -841,6 +849,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
