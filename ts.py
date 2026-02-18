@@ -497,16 +497,16 @@ def generate_company_report(ticker):
           DO NOT calculate EBITDA manually if an explicit value exists in the annual filing.
 
         -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
-        -   **OCF (Post-interest, as in screenshot):**
-            OCF = (Net cash provided by operating activities) - (Interest paid).
-            *Interest paid MUST be taken from the cash flow statement line explicitly labeled like "Repayment of interest – finance debt" (or equivalent).
-            *This OCF is NOT the headline CFO line; it is CFO after interest (matches the screenshot style).
+
         
-        -   **FOCF (Free Operating Cash Flow, as in screenshot):**
-            FOCF = OCF (post-interest, defined above) - (Acquisition of PP&E and intangible assets).
-            *Capex MUST be taken from the investing cash flow line explicitly labeled like "Acquisition of PP&E and intangible assets" (or equivalent).
-            *Do NOT add/remove other investing items (no equity interests, no acquisitions, no disposals) unless explicitly shown in the same table.
-        
+        -   **Net cash provided by operating activities (OCF):** Extract the exact **"Net cash provided by operating activities"** (or "Net cash from operations") line directly from the **Consolidated Statement of Cash Flows**. 
+            *DO NOT adjust for interest. Use the raw figure from the statement.*
+
+        -   **(-) Acquisition of PP&E and intangible assets:** Extract the cash used for **"Purchase of property, plant and equipment"** (Capex) AND **"Purchase of intangible assets"** from the Investing section of the Cash Flow Statement.
+            *Sum these values if reported separately.*
+
+        -   **FOCF (Free Operating Cash Flow):** FOCF = (Net cash provided by operating activities) + (Acquisition of PP&E and intangible assets).
+            *Note: Since Acquisition of PP&E is a negative outflow, you simply sum the two numbers (e.g., 2000 + (-1500) = 500).*
         -   **Net Debt (STRICT – Petrobras / screenshot definition):**
             You MUST compute Net Debt using this exact Petrobras definition from the FY2024 20-F:
             1) Gross Debt = Finance debt + Lease liabilities (IFRS 16)
@@ -530,8 +530,7 @@ def generate_company_report(ticker):
     
     2.  **Calculations (MANDATORY):**
         -   $EBITDA Margin = EBITDA / Revenue$
-        -   $OCF(post-interest) = (Net cash provided by operating activities) - (Interest paid)$
-        -   $FOCF = OCF(post-interest) - (Acquisition of PP&E and intangible assets)$
+        -   $FOCF = Net Cash from Ops + (Acquisition of PP&E and Intangibles)$
         -   $Net Debt = (Finance debt + Lease liabilities) - (Adjusted Cash & Cash Equivalents)$
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
@@ -607,8 +606,7 @@ def generate_company_report(ticker):
     | **Revenue** | 18,320 | 22,809 | 28,995 |
     | **EBITDA** | 2,050 | 2,500 | 3,400 |
     | **EBITDA Margin** | 11.2% | 11.0% | 11.7% |
-    | **FFO** | 1,400 | 1,800 | 2,200 |
-    | **Net cash provided by operating activities** | 1,100 | 1,500 | 2,000 |
+    | **Net cash provided by operating activities (OCF)** | 1,100 | 1,500 | 2,000 |
     | **(-) Acquisition of PP&E and intangible assets** | (1,000) | (1,200) | (1,300) |
     | **FOCF** | 100 | 300 | 700 |
     | **Net Debt** | 4,500 | 4,200 | 3,800 |
@@ -847,6 +845,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
