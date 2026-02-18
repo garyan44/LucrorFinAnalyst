@@ -26,47 +26,7 @@ MY_API_KEY = st.secrets["GENAI_API_KEY"]
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=MY_API_KEY)
-
-# ==========================================
-#  DEMO MODE CONFIGURATION (HARDCODED VALUES)
-# ==========================================
-# NOTE: Enter Capex as a NEGATIVE number.
-# NOTE: Enter Net Debt as a POSITIVE number.
-DEMO_DATA = {
-    "FY2023": {
-        "Revenue":  41784, 
-        "EBITDA": 18601, 
-        "OCF": 13372, 
-        "Capex": -5920, 
-        "NetDebt": 9685
-    },
-    "FY2024": {
-        "Revenue": 38056, 
-        "EBITDA": 14840, 
-        "OCF": 9366, 
-        "Capex": -6000, 
-        "NetDebt": 16366
-    }
-}
-
-# --- CALCULATION ENGINE (Ensures Math is Perfect) ---
-def calculate_metrics(data):
-    # FOCF = OCF + Capex (Capex is negative, so we add it)
-    focf = data["OCF"] + data["Capex"] 
-    
-    # EBITDA Margin
-    margin = (data["EBITDA"] / data["Revenue"]) * 100 if data["Revenue"] else 0
-    
-    # Net Leverage
-    leverage = data["NetDebt"] / data["EBITDA"] if data["EBITDA"] else 0
-    
-    # Coverage
-    coverage = focf / data["NetDebt"] if data["NetDebt"] else 0
-    
-    return focf, margin, leverage, coverage
-
-
-# --- HELPER: PARSE MARKDOWN TABLE (FOR INTERACTIVE DISPLAY) ---
+    # --- HELPER: PARSE MARKDOWN TABLE (FOR INTERACTIVE DISPLAY) ---
 
 def parse_markdown_table(markdown_content):
 
@@ -245,7 +205,7 @@ def create_excel(markdown_content, ticker):
                 if is_percent: return num / 100
                 return num
             except ValueError:
-                return val
+                return val # Return original text if not a number
 
         # Apply cleaning to all columns except the first (Item names)
         for col in df.columns[1:]:
@@ -414,7 +374,7 @@ def create_pdf(markdown_content, ticker):
             .logo-right {{ text-align: right; width: 50%; }}
 
             .logo-img {{ height: 45px; object-fit: contain; }}
-           
+          
             h1 {{ color: #2c3e50; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; }}
             h2 {{ color: #2c3e50; font-size: 16px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
             h3 {{ color: #2c3e50; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold; }}
@@ -458,68 +418,221 @@ def create_pdf(markdown_content, ticker):
 def generate_company_report(ticker):
     client = get_client()
     
-    # 1. Pre-calculate Metrics using Python (Guarantees accuracy)
-    # metrics_22 REMOVED as per request
-    metrics_23 = calculate_metrics(DEMO_DATA["FY2023"])
-    metrics_24 = calculate_metrics(DEMO_DATA["FY2024"])
-
-    # 2. Construct Prompt with Hardcoded Table
-    # NOTE: The instructions here force the AI to use the table but tell it to CITE it as if it were real.
+    # UPDATED PROMPT: Updated with specific boss requirements for Financial Summary
     prompt = f"""
     You are a professional Financial Credit Analyst.
-    
-    ### IMPORTANT: STRICT DATA INJECTION
-    **I have provided the EXACT financial figures you must use below.** **DO NOT SEARCH for financial numbers.** **ONLY search for qualitative info (Business Description, Ratings, Key Drivers).**
+    Your goal is to produce a deep-dive company credit report that matches the EXACT format below.
 
     ### INSTRUCTIONS:
-    1. **Financial Summary:** You MUST output the table exactly as written below. Do not recalculate or search for these numbers.
-    2. **Qualitative Analysis:** Surround this table with professional qualitative commentary (Business Description, Key Credit Drivers, etc.) based on real-world knowledge/search of {ticker}.
-    3. **Source Citation:** Mark the source in the footnote as "Audited Financial Statements and Company Investor Presentations." (Make it look professional and authentic).
+    1. **Search Strategy (CRITICAL):**
+        
+        - **Primary Source (Boss’s Orders):**
+          Search specifically for **"{ticker} Investor Relations"** to locate the company’s official investor relations website.
+          Use this site as the anchor for all financial documents.
+        
+        - **Regulatory Filings (MANDATORY – DO NOT SKIP):**
+          Identify the company’s primary annual regulatory filing.
+          - U.S. issuers: **Form 10-K**
+          - Foreign private issuers / ADRs: **Form 20-F**
+          Use ONLY these filings for audited financial statement data.
+        
+        - **Historical Financial Data (CRUCIAL):**
+          - Search for **"{ticker} Form 10-K (FY2022)" OR "{ticker} Form 20-F (FY2022)"**
+          - Search for **"{ticker} Form 10-K (FY2023)" OR "{ticker} Form 20-F (FY2023)"**
+          - Search for **"{ticker} Form 10-K (FY2024)" OR "{ticker} Form 20-F (FY2024)"**
+          Use the company’s primary annual filing for each fiscal year.
+          Do NOT rely on documents labeled only as “Annual Report” unless they explicitly contain the audited financial statements.
+        
+        - **Fiscal Year Verification (NON-NEGOTIABLE):**
+          First, identify the company’s fiscal year end from the filing.
+          Assign data to FY2022 / FY2023 / FY2024 strictly based on the stated fiscal year,
+          NOT the calendar year or publication date.
+        
+       - **EBITDA Source Rule (NON-NEGOTIABLE):**
+          For each year (FY2022/FY2023/FY2024), you MUST extract EBITDA/Adjusted EBITDA from the SAME annual filing
+          (Form 10-K or Form 20-F) that you used for Revenue for that year.
+          Search WITHIN that filing for: "Adjusted EBITDA", "EBITDA", "Performance measures", "Non-GAAP measures".
+        
+          ONLY if the annual filing does NOT disclose an explicit EBITDA/Adjusted EBITDA figure,
+          then use an OFFICIAL company IR earnings release / investor presentation as a fallback.
+        
+          DO NOT use third-party aggregators (Macrotrends, Yahoo Finance, StockAnalysis, etc.) for EBITDA.
+          If you cannot find it in official sources, output "N/A".
 
-    ### PROVIDED FINANCIAL DATA (COPY THIS TABLE EXACTLY):
-    | Item | FY2023 | FY2024 |
-    | :--- | :--- | :--- |
-    | **Revenue** | {DEMO_DATA['FY2023']['Revenue']:,} | {DEMO_DATA['FY2024']['Revenue']:,} |
-    | **EBITDA** | {DEMO_DATA['FY2023']['EBITDA']:,} | {DEMO_DATA['FY2024']['EBITDA']:,} |
-    | **EBITDA Margin** | {metrics_23[1]:.1f}% | {metrics_24[1]:.1f}% |
-    | **Net cash provided by operating activities (OCF)** | {DEMO_DATA['FY2023']['OCF']:,} | {DEMO_DATA['FY2024']['OCF']:,} |
-    | **(-) Acquisition of PP&E and intangible assets** | ({abs(DEMO_DATA['FY2023']['Capex']):,}) | ({abs(DEMO_DATA['FY2024']['Capex']):,}) |
-    | **FOCF** | {metrics_23[0]:,} | {metrics_24[0]:,} |
-    | **Net Debt** | {DEMO_DATA['FY2023']['NetDebt']:,} | {DEMO_DATA['FY2024']['NetDebt']:,} |
-    | **Net Leverage (Net Debt/EBITDA)** | {metrics_23[2]:.2f}x | {metrics_24[2]:.2f}x |
-    | **Coverage (FOCF/Net Debt)** | {metrics_23[3]:.2f}x | {metrics_24[3]:.2f}x |
+        
+        - **Cash Flow & Capex (STATEMENT-LEVEL DATA ONLY):**
+          Extract the following strictly from the **Consolidated Statement of Cash Flows**:
+        - **Net cash provided by operating activities (OCF):** Extract the value strictly from the detailed **"Consolidated Statement of Cash Flows"** (usually near the end of the report).
+      
+          *ANTI-HALLUCINATION RULES:*
+          1. **Anchor Check:** The correct table MUST contain rows for **"Depreciation, depletion and amortization"** and **"Foreign exchange, indexation and finance charges"**. If the table does not list these specific adjustments, IT IS THE WRONG TABLE.
+          2. **Ignore Highlights:** Do NOT use data from "Financial Highlights", "Selected Financial Data", "Key Figures", or "MD&A" sections. These are often adjusted/non-GAAP.
+          3. **Value Match:** The value you extract must be the bottom-line total labeled "Net cash provided by operating activities".
+          - **Capex**, defined as **"Acquisition of PP&E and intangible assets"** Search for this in the same table as **Net cash provided by operating activities (OCF):**
 
-    ### OUTPUT FORMAT (Follow this structure):
-    # **{ticker} Credit Report**
+        
+        - **Credit Ratings:**
+          Search for **"{ticker} Moody’s credit rating"**, **"{ticker} S&P credit rating"**, and **"{ticker} Fitch credit rating"**.
+          Use the most recent rating action press releases (2024–2025).
+        
+        - **Management & Investor Relations Contact:**
+          Search for:
+          - **"{ticker} CEO"**
+          - **"{ticker} CFO"**
+          - **"{ticker} Investor Relations contact"**
+          Prefer the official company or investor relations website.
+
+
+    2.  **Calculations & Definitions (STRICT):**
+        -   **Revenue:** Extract the exact **"Sales revenues"** or **"Net operating revenues"** line strictly from the **Consolidated Statement of Income** table.
+            * **CRITICAL:** Do NOT use numbers from the "Financial Highlights", "Key Figures", or "Gross Revenue" sections. Use the GAAP/IFRS table value only.
+        - **EBITDA (STRICT DOCUMENT CONSISTENCY RULE):**
+          First, search for **"Adjusted EBITDA" explicitly within the SAME annual regulatory filing
+          (Form 10-K or Form 20-F) used to extract Revenue for that fiscal year.**
+        
+          If an "Adjusted EBITDA" or "EBITDA" table exists in that filing (including notes,
+          segment information, or performance measures sections),
+          you MUST use that value.
+        
+          ONLY if the annual filing does NOT contain an explicit Adjusted EBITDA figure,
+          then search for a separate "Adjusted EBITDA reconciliation" in earnings releases
+          or investor presentations.
+        
+          DO NOT calculate EBITDA manually if an explicit value exists in the annual filing.
+
+        -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
+
+        
+        -   **Net cash provided by operating activities (OCF):** Extract the exact **"Net cash provided by operating activities"** (or "Net cash from operations") line directly from the **Consolidated Statement of Cash Flows**. 
+            *DO NOT adjust for interest. Use the raw figure from the statement.*
+
+        -   **(-) Acquisition of PP&E and intangible assets:** Extract the cash used for **"Purchase of property, plant and equipment"** (Capex) AND **"Purchase of intangible assets"** from the Investing section of the Cash Flow Statement.
+            *Sum these values if reported separately.*
+
+        -   **FOCF (Free Operating Cash Flow):** FOCF = (Net cash provided by operating activities) + (Acquisition of PP&E and intangible assets).
+            *Note: Since Acquisition of PP&E is a negative outflow, you simply sum the two numbers (e.g., 2000 + (-1500) = 500).*
+        -   **Net Debt (STRICT – Petrobras / screenshot definition):**
+            You MUST compute Net Debt using this exact Petrobras definition from the FY2024 20-F:
+            1) Gross Debt = Finance debt + Lease liabilities (IFRS 16)
+            2) Net Debt = Gross Debt - Adjusted Cash and Cash Equivalents
+        
+            CRITICAL:
+            - Do NOT use other “net debt” KPIs found in notes (e.g., Note 25) if they do NOT reconcile to Gross Debt - Adjusted Cash.
+            - You MUST show the reconciliation math in the Appendix:
+            Finance debt (value) + Lease liabilities (value) = Gross Debt (value)
+            Gross Debt (value) - Adjusted Cash & Cash Equivalents (value) = Net Debt (value)
+        
+            For FY2022 and FY2023: use the SAME definition and compute from the filing using:
+            Finance debt + Lease liabilities - Adjusted Cash & Cash Equivalents (if provided).
+            If Adjusted Cash is not provided for a year, then use the filing’s explicitly reported Net Debt ONLY IF it is part of the same Gross Debt - Adjusted Cash reconciliation section.
+
+
+
+        -   **Net Leverage:** Net Debt / Adjusted EBITDA.
+        -   **Coverage:** FOCF / Net Debt.
+    
+    
+    2.  **Calculations (MANDATORY):**
+        -   $EBITDA Margin = EBITDA / Revenue$
+        -   $FOCF = Net Cash from Ops + (Acquisition of PP&E and Intangibles)$
+        -   $Net Debt = (Finance debt + Lease liabilities) - (Adjusted Cash & Cash Equivalents)$
+        -   $Net Leverage = Net Debt / EBITDA$
+        -   $Coverage = FOCF / Net Debt$
+        **IMPORTANT:** EBITDA must be taken from an explicitly reported "EBITDA" or "Adjusted EBITDA" figure in an official filing.
+        Do NOT compute EBITDA as Operating Income + D&A unless you explicitly label it as an estimate and only if no reported EBITDA exists.
+
+        
+    
+    3.  **Format:** Output strictly in Markdown. Follow the One-Shot Example structure exactly.
+        
+    4.  **Audit Trail (CRITICAL):** -   AFTER the main report, output a section header called `### Appendix`.
+        -   Inside the Appendix, you MUST generate a structured list titled **"Data Source Dictionary"**.
+        -   **CRITICAL:** You must generate a bullet point for **EVERY SINGLE ROW** in the table, including **Calculated Metrics**, **Margins**, **Ratios**, and **Growth Rates**. Do not skip *any* row.
+        -   Format:
+            * **[Exact Row Name]**: Source: [Document Name/Page] OR Logic: [Formula used]. Raw Value: [Value].
+            * **[Item Name]**: Source Document: [Name], Page: [Page #], Raw Value: [Value], Logic: [Explanation].
+
+        -   Example:
+
+            * **Revenue**: Source Document: Ford 2024 10-K, Page: 45, Raw Value: 158,000, Logic: Sum of Automotive and Credit revenue.
+
+            * **FFO**: Source Document: Q3 Earnings Release, Page: 8, Raw Value: Calculated, Logic: Net Income (200) + D&A (150).
+    
+    5.  **Rationale (Internal):** AFTER the main report, output a section header called `Appendix`. INCLUDE IT IN THE NEXT PAGE. In this section, detail your thought process, reasoning for credit drivers, and how you located each data point (with URLs). This is for internal use and should NOT appear in the main report.
+        -   In this section, you must provide a **"Financial Data Audit"**.
+        -   For every year (FY23, FY24, LTM) in the Financial Summary, you must state:
+            * **Exact Document Name:** (e.g., "Ford 2024 10-K" - https://investor.ford.com/...)
+            * **Page Number/Table Name:** (e.g., "Consolidated Statement of Operations, Page 45")
+            * **Raw Figure Used:** (e.g., "I saw Revenue = 158,000 in the PDF, so I used 158,000")
+            * **Reasoning:** Explain why you assigned it to that specific column (e.g., "The report says 'Fiscal Year Ended Dec 31, 2024', so this goes in the FY2024 column").
+        -   **This is to prevent year-shifting errors.**
+
+    6.  **Transparency & Footnotes (NEW REQUIREMENT):**
+        -   **After EVERY section** (Ratings, Description, Financial Summary, Key Credit Drivers), you MUST include a small footnote  starting with "*Source:*" briefly describing where that specific data was found. (Leave one line, for tables of Ratings and Financial Summary, do NOT include "Source" in the table)
+        -   **Financial Summary Specificity:** The footnote directly below the Financial Summary table (LEAVE ONE LINE JUST AFTER THE TABLE, DO NOT INCLUDE "Source" (the footnote) IN THE TABLE,) MUST clarify if the figures are from **Audited Financial Statements**, an **Earnings Release**, or **Management Accounts**. This is crucial for replication.
+        -   **Ratings Specificity:** The footnote below the Ratings table MUST specify the exact document and date where the ratings were sourced. LEAVE ONE LINE AFTER THE TABLE, BEFORE THE SOURCE DESCRIPTION
+    7. **Data Freshness:** Use ONLY the most recent data available (2024/2025). Do NOT use outdated financials or ratings.
+    8. **Clean Format:** In the section of "Key Credit Drivers", use bullet points for clarity.
+    9. **No Citation Tags:** DO NOT include any text like "" or "[previous search]" or "cite" or "(previous search)" in your output.
+    10. USE BULLET POINTS IN THE "KEY MANAGEMENTS AND CONTACT" SECTION
+    
+
+    ### ONE-SHOT EXAMPLE (STRICTLY FOLLOW THIS TABLE STRUCTURE):
+    Input: JLR
+    Output:
+    # **Jaguar Land Rover Automotive plc**
 
     | Agency | Rating |
     | :--- | :--- |
-    | **Moody's:** | [Find latest] |
-    | **S&P:** | [Find latest] |
+    | **Moody's:** | Ba1 (stable) |
+    | **S&P:** | BBB- (positive) |
+    | **Fitch:** | BB- (stable) |
+
+    *Source: Latest Rating Action Commentaries from Moody's and S&P (Oct 2025).*
 
     ### Description
-    [Generate description of {ticker} business model]
+    Jaguar Land Rover (JLR) is a luxury automaker...
+
+    *Source: Company Profile, FY2024 Annual Report.*
 
     **Key Management & Contact:**
-    * **CEO:** [Find CEO]
-    * **CFO:** [Find CFO]
-    * **Investor Relations:** [Find Email/Contact]
+    * **CEO:** Adrian Mardell
+    * **CFO:** Richard Molyneux
+    * **Investor Relations:** Email : investor@jaguarlandrover.com
+
+
 
     ### Financial Summary
-    *In USD mn*
-    
-    [INSERT PROVIDED TABLE HERE]
+    *In GBP mn*
 
-    *Source: Audited Financial Statements and Company Investor Presentations.*
+    | Item | FY2022 | FY2023 | FY2024 |
+    | :--- | :--- | :--- | :--- |
+    | **Revenue** | 18,320 | 22,809 | 28,995 |
+    | **EBITDA** | 2,050 | 2,500 | 3,400 |
+    | **EBITDA Margin** | 11.2% | 11.0% | 11.7% |
+    | **Net cash provided by operating activities (OCF)** | 1,100 | 1,500 | 2,000 |
+    | **(-) Acquisition of PP&E and intangible assets** | (1,000) | (1,200) | (1,300) |
+    | **FOCF** | 100 | 300 | 700 |
+    | **Net Debt** | 4,500 | 4,200 | 3,800 |
+    | **Net Leverage (Net Debt/EBITDA)** | 2.2x | 1.68x | 1.12x |
+    | **Coverage (FOCF/Net Debt)** | 0.02x | 0.07x | 0.18x |
+
+    *Source: Figures for FY23/24 derived from Audited Financial Statements; LTM figures derived from Q3 2025 Earnings Release (Management Accounts).*
 
     ### Key Credit Drivers
-    * **Driver 1:** [Generate driver]
-    * **Driver 2:** [Generate driver]
+    **Premium brand positioning:** ...
+    *Source: Market analysis and JLR November 2025 Debt Investor Presentation.*
 
     ### Appendix
     **Data Source Dictionary**
-    * **Revenue**: Source: Annual Report Form 20-F (Consolidated Income Statement).
-    * **OCF**: Source: Annual Report Form 20-F (Consolidated Statement of Cash Flows).
+    * **Revenue**: Source Document: FY2024 Annual Report, Page 88, Raw Value: 28,995, Logic: Extracted directly from Consolidated Income Statement.
+    * **EBITDA**: Source Document: Investor Presentation Slide 12, Raw Value: 3,400, Logic: Reported Adjusted EBITDA.
+    * **FFO**: Source Document: 10-K Cash Flow Stmt, Raw Value: Calculated, Logic: Net Income (1,200) + D&A (1,000).
+
+    ### YOUR TASK:
+    Now, generate the report for the following ticker using the latest available live data.
+    Input: {ticker}
+    Output:
     """
 
     # --- RETRY LOGIC (Maintained) ---
@@ -736,4 +849,38 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
