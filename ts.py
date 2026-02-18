@@ -498,9 +498,22 @@ def generate_company_report(ticker):
 
         -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
         -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
-        -   **FOCF (Free Operating Cash Flow):** (Net Cash from Operations) - (Capex).
-        -   **Net Debt:** (Short-term Debt + Long-term Debt + Finance Leases) - (Cash & Cash Equivalents).
-            * *Note:* Do NOT subtract Restricted Cash.
+        -   **OCF (Post-interest, as in screenshot):**
+            OCF = (Net cash provided by operating activities) - (Interest paid).
+            *Interest paid MUST be taken from the cash flow statement line explicitly labeled like "Repayment of interest – finance debt" (or equivalent).
+            *This OCF is NOT the headline CFO line; it is CFO after interest (matches the screenshot style).
+        
+        -   **FOCF (Free Operating Cash Flow, as in screenshot):**
+            FOCF = OCF (post-interest, defined above) - (Acquisition of PP&E and intangible assets).
+            *Capex MUST be taken from the investing cash flow line explicitly labeled like "Acquisition of PP&E and intangible assets" (or equivalent).
+            *Do NOT add/remove other investing items (no equity interests, no acquisitions, no disposals) unless explicitly shown in the same table.
+        
+        -   **Net Debt (Petrobras-style / screenshot-style):**
+            Net Debt = Gross Debt - Adjusted Cash and Cash Equivalents
+            where Gross Debt = Finance Debt + Lease Liabilities (IFRS 16) (or equivalent wording).
+            *Cash MUST be "Adjusted Cash and Cash Equivalents" if the company defines it that way in the filing.
+            *Do NOT subtract restricted cash unless the filing's Net Debt definition explicitly includes/excludes it.
+
         -   **Net Leverage:** Net Debt / Adjusted EBITDA.
         -   **Coverage:** FOCF / Net Debt.
     
@@ -508,8 +521,10 @@ def generate_company_report(ticker):
     2.  **Calculations (MANDATORY):**
         -   $EBITDA Margin = EBITDA / Revenue$
         -   $FFO = Net Income + D&A$
-        -   $FOCF = (Net cash provided by operating activities) - (Acquisition of PP&E and intangibles)$
-        -   $Net Debt = Total Debt - Cash$
+        -   $OCF(post-interest) = (Net cash provided by operating activities) - (Interest paid)$
+        -   $FOCF = OCF(post-interest) - (Acquisition of PP&E and intangible assets)$
+        -   $Net Debt = (Finance Debt + Lease Liabilities) - (Adjusted Cash and Cash Equivalents)$
+
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
         **IMPORTANT:** EBITDA must be taken from an explicitly reported "EBITDA" or "Adjusted EBITDA" figure in an official filing.
@@ -824,6 +839,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
