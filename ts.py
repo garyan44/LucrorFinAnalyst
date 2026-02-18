@@ -34,18 +34,18 @@ def get_client():
 # NOTE: Enter Net Debt as a POSITIVE number.
 DEMO_DATA = {
     "FY2023": {
-        "Revenue": 43212, 
-        "EBITDA": 22000, 
-        "OCF": 43212, 
-        "Capex": -12114, 
-        "NetDebt": 28000
+        "Revenue":  41784, 
+        "EBITDA": 18601, 
+        "OCF": 13372, 
+        "Capex": -5920, 
+        "NetDebt": 9685
     },
     "FY2024": {
-        "Revenue": 37984, 
-        "EBITDA": 25000, 
-        "OCF": 37984, 
-        "Capex": -14644, 
-        "NetDebt": 25000
+        "Revenue": 38056, 
+        "EBITDA": 14840, 
+        "OCF": 9366, 
+        "Capex": -6000, 
+        "NetDebt": 16366
     }
 }
 
@@ -736,3 +736,4 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
