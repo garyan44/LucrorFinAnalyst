@@ -508,11 +508,14 @@ def generate_company_report(ticker):
             *Capex MUST be taken from the investing cash flow line explicitly labeled like "Acquisition of PP&E and intangible assets" (or equivalent).
             *Do NOT add/remove other investing items (no equity interests, no acquisitions, no disposals) unless explicitly shown in the same table.
         
-        -   **Net Debt (Petrobras-style / screenshot-style):**
-            Net Debt = Gross Debt - Adjusted Cash and Cash Equivalents
-            where Gross Debt = Finance Debt + Lease Liabilities (IFRS 16) (or equivalent wording).
-            *Cash MUST be "Adjusted Cash and Cash Equivalents" if the company defines it that way in the filing.
-            *Do NOT subtract restricted cash unless the filing's Net Debt definition explicitly includes/excludes it.
+        - **Net Debt (STRICT – MUST MATCH COMPANY-DEFINITION):**
+            Step 1 (priority): Search the FY2024 annual filing (10-K/20-F) for an explicitly reported "Net debt" figure or a "Net debt" definition table.
+            If found, you MUST use the company's reported Net Debt number (do NOT compute your own).
+            Step 2 (only if not explicitly reported): Compute Net Debt using the company's definition in the filing. If no definition exists, use:
+            Net Debt = (Short-term debt + Long-term debt + Lease liabilities) - Cash & cash equivalents.
+            CRITICAL Petrobras rule: If the filing defines Net Debt as Gross Debt - Adjusted Cash and Cash Equivalents, use that EXACTLY.
+            Do NOT use unadjusted cash if "Adjusted cash" is given.
+
 
         -   **Net Leverage:** Net Debt / Adjusted EBITDA.
         -   **Coverage:** FOCF / Net Debt.
@@ -523,8 +526,7 @@ def generate_company_report(ticker):
         -   $FFO = Net Income + D&A$
         -   $OCF(post-interest) = (Net cash provided by operating activities) - (Interest paid)$
         -   $FOCF = OCF(post-interest) - (Acquisition of PP&E and intangible assets)$
-        -   $Net Debt = (Finance Debt + Lease Liabilities) - (Adjusted Cash and Cash Equivalents)$
-
+        - $Net Debt = (Gross Debt as defined by company) - (Adjusted Cash & Cash Equivalents, if defined)$
         -   $Net Leverage = Net Debt / EBITDA$
         -   $Coverage = FOCF / Net Debt$
         **IMPORTANT:** EBITDA must be taken from an explicitly reported "EBITDA" or "Adjusted EBITDA" figure in an official filing.
@@ -839,6 +841,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
