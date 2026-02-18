@@ -462,10 +462,14 @@ def generate_company_report(ticker):
         
         - **Cash Flow & Capex (STATEMENT-LEVEL DATA ONLY):**
           Extract the following strictly from the **Consolidated Statement of Cash Flows**:
-          - **Net cash provided by operating activities** (or equivalent wording)
-          - **Capex**, defined as:
-            - Purchase of Property, Plant & Equipment
-            - PLUS Purchase of Intangible Assets
+        - **Net cash provided by operating activities (OCF):** Extract the value strictly from the detailed **"Consolidated Statement of Cash Flows"** (usually near the end of the report).
+      
+          *ANTI-HALLUCINATION RULES:*
+          1. **Anchor Check:** The correct table MUST contain rows for **"Depreciation, depletion and amortization"** and **"Foreign exchange, indexation and finance charges"**. If the table does not list these specific adjustments, IT IS THE WRONG TABLE.
+          2. **Ignore Highlights:** Do NOT use data from "Financial Highlights", "Selected Financial Data", "Key Figures", or "MD&A" sections. These are often adjusted/non-GAAP.
+          3. **Value Match:** The value you extract must be the bottom-line total labeled "Net cash provided by operating activities".
+          - **Capex**, defined as **"Acquisition of PP&E and intangible assets"** Search for this in the same table as **Net cash provided by operating activities (OCF):**
+
         
         - **Credit Ratings:**
           Search for **"{ticker} Moody’s credit rating"**, **"{ticker} S&P credit rating"**, and **"{ticker} Fitch credit rating"**.
@@ -845,6 +849,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
