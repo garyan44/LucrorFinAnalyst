@@ -497,7 +497,6 @@ def generate_company_report(ticker):
           DO NOT calculate EBITDA manually if an explicit value exists in the annual filing.
 
         -   **EBITDA Margin:** Adjusted EBITDA / Revenue.
-        -   **FFO (Funds From Operations):** Net Income + Depreciation & Amortization.
         -   **OCF (Post-interest, as in screenshot):**
             OCF = (Net cash provided by operating activities) - (Interest paid).
             *Interest paid MUST be taken from the cash flow statement line explicitly labeled like "Repayment of interest – finance debt" (or equivalent).
@@ -531,7 +530,6 @@ def generate_company_report(ticker):
     
     2.  **Calculations (MANDATORY):**
         -   $EBITDA Margin = EBITDA / Revenue$
-        -   $FFO = Net Income + D&A$
         -   $OCF(post-interest) = (Net cash provided by operating activities) - (Interest paid)$
         -   $FOCF = OCF(post-interest) - (Acquisition of PP&E and intangible assets)$
         -   $Net Debt = (Finance debt + Lease liabilities) - (Adjusted Cash & Cash Equivalents)$
@@ -849,6 +847,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
