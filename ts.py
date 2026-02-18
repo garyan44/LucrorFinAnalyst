@@ -33,26 +33,19 @@ def get_client():
 # NOTE: Enter Capex as a NEGATIVE number.
 # NOTE: Enter Net Debt as a POSITIVE number.
 DEMO_DATA = {
-    "FY2022": {
-        "Revenue": 124474, 
-        "EBITDA": 66217, 
-        "OCF": 49717, 
-        "Capex": -9581, 
-        "NetDebt": 41516
-    },
     "FY2023": {
-        "Revenue": 102409, 
-        "EBITDA": 52414, 
+        "Revenue": 43212, 
+        "EBITDA": 22000, 
         "OCF": 43212, 
         "Capex": -12114, 
-        "NetDebt": 44698
+        "NetDebt": 28000
     },
     "FY2024": {
-        "Revenue": 91416, 
-        "EBITDA": 40399, 
+        "Revenue": 37984, 
+        "EBITDA": 25000, 
         "OCF": 37984, 
         "Capex": -14644, 
-        "NetDebt": 52240
+        "NetDebt": 25000
     }
 }
 
@@ -466,7 +459,7 @@ def generate_company_report(ticker):
     client = get_client()
     
     # 1. Pre-calculate Metrics using Python (Guarantees accuracy)
-    metrics_22 = calculate_metrics(DEMO_DATA["FY2022"])
+    # metrics_22 REMOVED as per request
     metrics_23 = calculate_metrics(DEMO_DATA["FY2023"])
     metrics_24 = calculate_metrics(DEMO_DATA["FY2024"])
 
@@ -484,17 +477,17 @@ def generate_company_report(ticker):
     3. **Source Citation:** Mark the source in the footnote as "Audited Financial Statements and Company Investor Presentations." (Make it look professional and authentic).
 
     ### PROVIDED FINANCIAL DATA (COPY THIS TABLE EXACTLY):
-    | Item | FY2022 | FY2023 | FY2024 |
-    | :--- | :--- | :--- | :--- |
-    | **Revenue** | {DEMO_DATA['FY2022']['Revenue']:,} | {DEMO_DATA['FY2023']['Revenue']:,} | {DEMO_DATA['FY2024']['Revenue']:,} |
-    | **EBITDA** | {DEMO_DATA['FY2022']['EBITDA']:,} | {DEMO_DATA['FY2023']['EBITDA']:,} | {DEMO_DATA['FY2024']['EBITDA']:,} |
-    | **EBITDA Margin** | {metrics_22[1]:.1f}% | {metrics_23[1]:.1f}% | {metrics_24[1]:.1f}% |
-    | **Net cash provided by operating activities (OCF)** | {DEMO_DATA['FY2022']['OCF']:,} | {DEMO_DATA['FY2023']['OCF']:,} | {DEMO_DATA['FY2024']['OCF']:,} |
-    | **(-) Acquisition of PP&E and intangible assets** | ({abs(DEMO_DATA['FY2022']['Capex']):,}) | ({abs(DEMO_DATA['FY2023']['Capex']):,}) | ({abs(DEMO_DATA['FY2024']['Capex']):,}) |
-    | **FOCF** | {metrics_22[0]:,} | {metrics_23[0]:,} | {metrics_24[0]:,} |
-    | **Net Debt** | {DEMO_DATA['FY2022']['NetDebt']:,} | {DEMO_DATA['FY2023']['NetDebt']:,} | {DEMO_DATA['FY2024']['NetDebt']:,} |
-    | **Net Leverage (Net Debt/EBITDA)** | {metrics_22[2]:.2f}x | {metrics_23[2]:.2f}x | {metrics_24[2]:.2f}x |
-    | **Coverage (FOCF/Net Debt)** | {metrics_22[3]:.2f}x | {metrics_23[3]:.2f}x | {metrics_24[3]:.2f}x |
+    | Item | FY2023 | FY2024 |
+    | :--- | :--- | :--- |
+    | **Revenue** | {DEMO_DATA['FY2023']['Revenue']:,} | {DEMO_DATA['FY2024']['Revenue']:,} |
+    | **EBITDA** | {DEMO_DATA['FY2023']['EBITDA']:,} | {DEMO_DATA['FY2024']['EBITDA']:,} |
+    | **EBITDA Margin** | {metrics_23[1]:.1f}% | {metrics_24[1]:.1f}% |
+    | **Net cash provided by operating activities (OCF)** | {DEMO_DATA['FY2023']['OCF']:,} | {DEMO_DATA['FY2024']['OCF']:,} |
+    | **(-) Acquisition of PP&E and intangible assets** | ({abs(DEMO_DATA['FY2023']['Capex']):,}) | ({abs(DEMO_DATA['FY2024']['Capex']):,}) |
+    | **FOCF** | {metrics_23[0]:,} | {metrics_24[0]:,} |
+    | **Net Debt** | {DEMO_DATA['FY2023']['NetDebt']:,} | {DEMO_DATA['FY2024']['NetDebt']:,} |
+    | **Net Leverage (Net Debt/EBITDA)** | {metrics_23[2]:.2f}x | {metrics_24[2]:.2f}x |
+    | **Coverage (FOCF/Net Debt)** | {metrics_23[3]:.2f}x | {metrics_24[3]:.2f}x |
 
     ### OUTPUT FORMAT (Follow this structure):
     # **{ticker} Credit Report**
@@ -743,5 +736,3 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
-
-
