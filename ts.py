@@ -178,29 +178,37 @@ def parse_markdown_table(markdown_content):
 
         return None, None, None
 def update_markdown_table_value(markdown_text, item, year, new_value):
-    pattern = r"(\|\s*\*\*" + re.escape(item) + r"\*\*.*?\|)"
-    match = re.search(pattern, markdown_text, flags=re.DOTALL)
-    if not match:
+    lines = markdown_text.split("\n")
+    
+    # Find header row to determine column index
+    header_line = None
+    for line in lines:
+        if "| Item" in line:
+            header_line = line
+            break
+
+    if not header_line:
         return markdown_text
 
-    row = match.group(1)
-    cells = row.strip().split("|")
-
-    headers_pattern = r"\|\s*Item\s*\|(.*?)\|"
-    headers_match = re.search(headers_pattern, markdown_text)
-    if not headers_match:
-        return markdown_text
-
-    headers = ["Item"] + [h.strip() for h in headers_match.group(1).split("|") if h.strip()]
+    headers = [h.strip().replace("*", "") for h in header_line.split("|") if h.strip()]
+    
     if year not in headers:
         return markdown_text
 
     col_index = headers.index(year)
 
-    cells[col_index] = f" {new_value} "
-    new_row = "|".join(cells)
+    # Find the correct row
+    for i, line in enumerate(lines):
+        if f"**{item}**" in line:
+            cells = [c for c in line.split("|")]
 
-    return markdown_text.replace(row, new_row)
+            # Safety check
+            if col_index < len(cells):
+                cells[col_index] = f" {new_value} "
+                lines[i] = "|".join(cells)
+            break
+
+    return "\n".join(lines)
 
     # --- EXCEL GENERATION FUNCTION (NEW) ---
 def create_excel(markdown_content, ticker):
@@ -964,6 +972,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
