@@ -901,23 +901,37 @@ if st.session_state["report_text"]:
     
             new_val = st.text_input("Enter Correct Value")
             comment = st.text_area("Source / Explanation / What was wrong")
+
+            save_mode = st.radio(
+                "Save Mode",
+                ["Temporary (session only)", "Permanent (future runs)"],
+                index=0
+            )
     
+    
+    
+
             if st.button("Save Correction"):
                 item_name = df_financials.iloc[row_idx][0].replace("**", "")
-    
+            
+                # Update dataframe immediately
                 df_financials.at[row_idx, year] = new_val
-    
+            
+                # Update markdown immediately
                 st.session_state["report_text"] = update_markdown_table_value(
                     st.session_state["report_text"],
                     item_name,
                     year,
                     new_val
                 )
-    
-                store_feedback(current_ticker, item_name, year, new_val, comment)
-    
-                st.success("Correction saved. Report updated instantly.")
-                st.session_state["feedback_mode"] = False
+            
+                # Save permanently ONLY if selected
+                if save_mode == "Permanent (future runs)":
+                    store_feedback(current_ticker, item_name, year, new_val, comment)
+                    st.success("Correction saved permanently.")
+                else:
+                    st.success("Correction applied for this session only.")
+            
                 st.rerun()
     else:
         # Fallback
@@ -925,7 +939,14 @@ if st.session_state["report_text"]:
     
     # 3. Download Buttons
     st.markdown("### 📥 Download Report")
-    dl_col1, dl_col2, dl_col3 = st.columns([1, 1, 1])
+    dl_col1, dl_col2, dl_col3, dl_col4 = st.columns([1, 1, 1, 1])
+
+    if st.button("🗑 Clear Permanent Corrections"):
+    data = load_feedback()
+    if current_ticker in data:
+        del data[current_ticker]
+        save_feedback(data)
+        st.success("Permanent corrections cleared.")
     
     pdf_data = create_pdf(st.session_state["report_text"], current_ticker)
     with dl_col1:
@@ -943,7 +964,7 @@ if st.session_state["report_text"]:
     with dl_col2:
         if xls_data:
             st.download_button(
-                label="📊 Download Financials (Excel)",
+                label="📊 Download as Excel",
                 data=xls_data,
                 file_name=f"{current_ticker}_Financials.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -953,6 +974,16 @@ if st.session_state["report_text"]:
     with dl_col3:
         if st.button("📝 Give Feedback"):
             st.session_state["feedback_mode"] = True
+
+    with dl_col4:
+        if st.button("🗑 Clear Permanent Corrections"):
+            data = load_feedback()
+            if current_ticker in data:
+                del data[current_ticker]
+                save_feedback(data)
+                st.success("Permanent corrections cleared.")
+            else:
+                st.info("No permanent corrections stored for this ticker.")
 
     # 4. Thinking Mode
     with st.expander("🧠 AI Thought Process & Sources (Click to Expand)", expanded=False):
@@ -981,6 +1012,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
