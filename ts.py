@@ -941,12 +941,7 @@ if st.session_state["report_text"]:
     st.markdown("### 📥 Download Report")
     dl_col1, dl_col2, dl_col3, dl_col4 = st.columns([1, 1, 1, 1])
 
-    if st.button("🗑 Clear Permanent Corrections"):
-    data = load_feedback()
-    if current_ticker in data:
-        del data[current_ticker]
-        save_feedback(data)
-        st.success("Permanent corrections cleared.")
+    
     
     pdf_data = create_pdf(st.session_state["report_text"], current_ticker)
     with dl_col1:
@@ -1012,6 +1007,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
