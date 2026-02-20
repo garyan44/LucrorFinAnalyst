@@ -179,33 +179,42 @@ def parse_markdown_table(markdown_content):
         return None, None, None
 def update_markdown_table_value(markdown_text, item, year, new_value):
     lines = markdown_text.split("\n")
-    
-    # Find header row to determine column index
-    header_line = None
-    for line in lines:
+
+    # Find header row
+    header_index = None
+    for i, line in enumerate(lines):
         if "| Item" in line:
-            header_line = line
+            header_index = i
             break
 
-    if not header_line:
+    if header_index is None:
         return markdown_text
 
-    headers = [h.strip().replace("*", "") for h in header_line.split("|") if h.strip()]
-    
+    # Parse headers properly
+    raw_headers = lines[header_index].strip().split("|")
+    headers = [h.strip().replace("*", "") for h in raw_headers if h.strip()]
+
     if year not in headers:
         return markdown_text
 
-    col_index = headers.index(year)
+    # Determine real column index in raw split (account for empty first cell)
+    year_position = headers.index(year)
 
-    # Find the correct row
+    # Now locate the correct row
     for i, line in enumerate(lines):
         if f"**{item}**" in line:
-            cells = [c for c in line.split("|")]
+            raw_cells = line.split("|")
 
-            # Safety check
-            if col_index < len(cells):
-                cells[col_index] = f" {new_value} "
-                lines[i] = "|".join(cells)
+            # Remove first and last empty cell
+            cells = raw_cells[1:-1]
+
+            if year_position < len(cells):
+                cells[year_position] = f" {new_value} "
+
+                # Reconstruct correctly with pipes
+                new_line = "| " + " | ".join(cells) + " |"
+                lines[i] = new_line
+
             break
 
     return "\n".join(lines)
@@ -972,6 +981,7 @@ if st.session_state["report_text"]:
              st.info("No detailed grounding metadata available.")
 elif submitted and not ticker_input:
     st.warning("Please enter a ticker symbol.")
+
 
 
 
